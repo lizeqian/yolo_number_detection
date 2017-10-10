@@ -20,9 +20,11 @@ class Net:
         self.b_layer_6 = self.w_layer_6[3]
         self.images = tf.placeholder(tf.float32, [None, 448, 448, 1], name='images')
         self.logits = self.net_6_layers(self.images, is_training=is_training)
+
+        self.batch_size = 100
         
         if is_training:
-            self.labels = tf.placeholder(tf.float32, [None, 7, 7, 5+2])
+            self.labels = tf.placeholder(tf.float32, [None, 7, 7, 2*5+2])
             self.loss_function(self.logits, self.labels)
             self.total_loss = tf.losses.get_total_loss()
             
@@ -72,26 +74,30 @@ class Net:
         fc2_w = self.weight_variable([4096, 7*7*12])
         fc2_b = self.bias_variable([7*7*12])
         fc1_out = self.fc(layer6_out_flat, fc1_w, fc1_b)
-        fc2_out = self.fc(fc1_out, fc2_w, fc2_b)
-        fc2_out = tf.reshape(fc2_out, [-1, 7, 7, 12])
+        fc2_out = self.fc(fc1_out, fc2_w, fc2_b)   #[7*7*num_classes, 7*7*num_boxes*5]
+        #fc2_out = tf.reshape(fc2_out, [-1, 7, 7, 7])
         
         return fc2_out
     
     def iou_calc(self, box0, box1): #x, y, w, h
-        boxes1 = tf.stack([boxes1[:, :, :, 0] - boxes1[:, :, :, 2] / 2.0,
-                           boxes1[:, :, :, 1] - boxes1[:, :, :, 3] / 2.0,
-                           boxes1[:, :, :, 0] + boxes1[:, :, :, 2] / 2.0,
-                           boxes1[:, :, :, 1] + boxes1[:, :, :, 3] / 2.0])
+        boxes1 = tf.stack([boxes1[:, :, :, :, 0] - boxes1[:, :, :, :, 2] / 2.0,
+                           boxes1[:, :, :, :, 1] - boxes1[:, :, :, :, 3] / 2.0,
+                           boxes1[:, :, :, :, 0] + boxes1[:, :, :, :, 2] / 2.0,
+                           boxes1[:, :, :, :, 1] + boxes1[:, :, :, :, 3] / 2.0])
         boxes1 = tf.transpose(boxes1, [1, 2, 3, 4, 0])
 
-        boxes2 = tf.stack([boxes2[:, :, :, 0] - boxes2[:, :, :, 2] / 2.0,
-                           boxes2[:, :, :, 1] - boxes2[:, :, :, 3] / 2.0,
-                           boxes2[:, :, :, 0] + boxes2[:, :, :, 2] / 2.0,
-                           boxes2[:, :, :, 1] + boxes2[:, :, :, 3] / 2.0])
+        boxes2 = tf.stack([boxes2[:, :, :, :, 0] - boxes2[:, :, :, :, 2] / 2.0,
+                           boxes2[:, :, :, :, 1] - boxes2[:, :, :, :, 3] / 2.0,
+                           boxes2[:, :, :, :, 0] + boxes2[:, :, :, :, 2] / 2.0,
+                           boxes2[:, :, :, :, 1] + boxes2[:, :, :, :, 3] / 2.0])
         boxes2 = tf.transpose(boxes2, [1, 2, 3, 4, 0])
     
 
     def loss_function(self, predicts, labels):
+        predict_class = tf.reshape(predicts[:,:7*7*2], [self.batch_size, 7, 7, 2])
+        predict_boxes = tf.reshape(predicts[:, 7*7*2:], [self.batch_size, 7, 7, 1])
+
+
         
 
 
