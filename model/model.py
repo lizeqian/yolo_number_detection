@@ -111,10 +111,22 @@ class Net:
         
     
 
-    def loss_function(self, predicts, labels):
-        predict_class = tf.reshape(predicts[:,:7*7*2], [self.batch_size, 7, 7, 2])
-        predict_scales = tf.reshape(predicts[:, 7*7*2:(7*7*2+7*7*2)])
-        predict_boxes = tf.reshape(predicts[:, (7*7*2+7*7*2):], [self.batch_size, 7, 7, 2, 4])
+    def loss_function(self, predicts, labels): #labels: [batch_size, cell_size_x, cell_size_y, 2+5] (x, y, w, h, C, p(c0), p(c1)) 
+        predict_class = tf.reshape(predicts[:,:7*7*2], [self.batch_size, 7, 7, 2]) #batch_size, cell_size, cell_size, num of class (class score)
+        predict_scales = tf.reshape(predicts[:, 7*7*2:(7*7*2+7*7*2)], [self.batch_size, 7, 7, 2]) #batch_size, cell_size, cell_size, num of boxes (box confidence)
+        predict_boxes = tf.reshape(predicts[:, (7*7*2+7*7*2):], [self.batch_size, 7, 7, 2, 4]) # batch_size, cell_size, cell_size, boxes_num, 4 (box coordinate)
+        
+        #calculate class loss
+        class_loss = self.weight_variable([self.batch_size])
+        
+        for i in range(self.batch_size):
+            for x in range(7):
+                for y in range(7):
+                    if labels[i, x, y, 4] == 1:
+                        class_loss[i] += tf.square(labels[i, x, y, 5]-predict_class[i, x, y, 0]) + tf.square(labels[i, x, y, 6]-predict_class[i, x, y, 1])
+                
+        
+        
         
         
         
