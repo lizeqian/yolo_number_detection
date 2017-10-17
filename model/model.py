@@ -23,6 +23,9 @@ class Net:
 
         self.batch_size = 100
         self.offset = np.transpose(np.reshape(np.array([np.arange(7)] * 7 * 2), (2, 7, 7)), (1, 2, 0))
+
+        self.lambda_noobj = 0.5
+        self.lambda_coord = 5
         
         if is_training:
             self.labels = tf.placeholder(tf.float32, [None, 7, 7, 2*5+2])
@@ -48,6 +51,10 @@ class Net:
     def bias_variable(self, shape):
         initial = tf.constant(0.1, shape=shape)
         return tf.Variable(initial)
+
+    def loss_variable(self, shape):
+        initial = tf.constant(0.0001, shape=shape)
+        reurn tf.Variable(initial) 
 
     def net_6_layers(self,image,is_training=True):
         l1_w = self.weight_variable(self.w_layer_1)
@@ -108,7 +115,22 @@ class Net:
                 
         union_square = tf.maximum(square1 + square2 - inter_square, 1e-10)
         return tf.clip_by_value(inter_square / union_square, 0.0, 1.0)
-        
+
+def iou_calc_loop(self, boxes0, boxes1): #x, y, w, h
+    inter_lu_x = tf.maximum(boxes0[0]-boxes0[2], boxes1[0]-boxes1[2])
+    inter_lu_y = tf.maximum(boxes0[1]-boxes0[3], boxes1[1]-boxes1[3])
+    inter_rb_x = tf.minimum(boxes0[0]+boxes0[2], boxes1[0]+boxes1[2])
+    inter_rb_y = tf.minimum(boxes0[1]+boxes0[3], boxes1[1]+boxes1[3])
+
+    inter_delta_x = tf.maximum(0.0, inter_rb_x - inter_lu_x)
+    inter_delta_y = tf.maximum(0.0, inter_rb_y - inter_lu_y)
+    
+    inter_area = inter_delta_x*inter_delta_y
+    iou = inter_area/(boxes0[2]*boxes0[3]+boxes1[2]+boxes1[3]-inter_area)
+    
+    return iou
+
+    
     
 
     def loss_function(self, predicts, labels): #labels: [batch_size, cell_size_x, cell_size_y, 2+5] (x, y, w, h, C, p(c0), p(c1)) 
@@ -116,27 +138,52 @@ class Net:
         predict_scales = tf.reshape(predicts[:, 7*7*2:(7*7*2+7*7*2)], [self.batch_size, 7, 7, 2]) #batch_size, cell_size, cell_size, num of boxes (box confidence)
         predict_boxes = tf.reshape(predicts[:, (7*7*2+7*7*2):], [self.batch_size, 7, 7, 2, 4]) # batch_size, cell_size, cell_size, boxes_num, 4 (box coordinate)
         
-        #calculate class loss
-        class_loss = self.weight_variable([self.batch_size])
+        #calculate loss
+        class_loss = self.loss_variable([self.batch_size])
+        B
+        iou_loss = self.loss_variable([self.batch_size])
+        coord_loss = self.loss_variable([self.batch_size])
         
+#       for i in range(self.batch_size):
+#           for x in range(7):
+#               for y in range(7):
+#                   if labels[i, x, y, ] == 1:
+#                       class_loss[i] += tf.square(labels[i, x, y, 5]-predict_class[i, x, y, 0]) + tf.square(labels[i, x, y, 6]-predict_class[i, x, y, 1])
+
+        #calculate iou loss 
+
+        label_boxes = labels[:,:,:,:4]
+
+
         for i in range(self.batch_size):
             for x in range(7):
                 for y in range(7):
-                    if labels[i, x, y, 4] == 1:
+                    if labels[i, x, y, ] == 1:
                         class_loss[i] += tf.square(labels[i, x, y, 5]-predict_class[i, x, y, 0]) + tf.square(labels[i, x, y, 6]-predict_class[i, x, y, 1])
-                
-        
-        
-        
-        
-        
-        
+                    for b in range(2):
+                        boxes0 = predict_boxes[i, x, y, b]
+                        boxes1 = label_boxes[i, x, y]
+                        true_iou = self.iou_calc_loop(boxes0, boxes1)
+                        pred_confidence = predict_scales[i, x, y, b]
+                        if labels[i, x, y, 4] == 1 and pred_confidence == tf.reduce_max(predict_scales[i,x, y, :]):
+                            iou_loss[i] += tf.square(pred_confidence - true_iou)
+                            coordinate[i] += self.lambda_coord*(tf.square(predict_boxes[i, x, y, b, 0]-label_boxes[i, x, y, 0])+  \
+                                                                tf.square(predict_boxes[i, x, y, b, 1]-label_boxes[i, x, y, 1])+  \
+                                                                tf.square(tf.sqrt(predict_boxes[i, x, y, b, 2]-label_boxes[i, x, y, 2]))+  \
+                                                                tf.square(tf.sqrt(predict_boxes[i, x, y, b, 3]-label_boxes[i, x, y, 3])))
+                        else:
+                            iou_loss[i] += self.lambda_noobj*tf.square(pred_confidence)
 
-        
+        #calculate coordinate loss 
 
+#       for i in range(self.batch_size):
+#           for x in range(7):
+#               for y in range(7):
+#                   for b in range(2):
+#                       pred_confidence = predict_scales[i, x, y, b]
+#                       if labels[i, x, y, 4] == 1 and pred_confidence == tf.reduce_max(predict_scales[i,x, y, :]):
 
-        
-
-
-
+        tf.losses.add_loss(class_loss)
+        tf.losses.add_loss(iou_loss)
+        tf.losses.add_loss(coord_loss)
 
