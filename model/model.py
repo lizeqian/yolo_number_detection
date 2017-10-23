@@ -53,11 +53,11 @@ class Net:
         return tf.maximum(0.1*relu_, relu_)
 
     def weight_variable(self, shape):
-        initial = tf.truncated_normal(shape, stddev=0.1)
+        initial = tf.truncated_normal(shape, stddev=0.0001)
         return tf.Variable(initial)
 
     def bias_variable(self, shape):
-        initial = tf.constant(0.1, shape=shape)
+        initial = tf.constant(0.01, shape=shape)
         return tf.Variable(initial)
 
     def loss_variable(self, shape):
@@ -86,15 +86,18 @@ class Net:
         
 #        layer6_out_flat = tf.reshape(layer6_out, [-1, 7*7*self.w_layer_6[3]])
         layer4_out_flat = tf.reshape(layer4_out, [-1, 7*7*self.w_layer_4[3]])
+        
         fc1_w = self.weight_variable([7*7*self.w_layer_4[3], 4096])
         fc1_b = self.bias_variable([4096])
+        fc1_out = self.fc(layer4_out_flat, fc1_w, fc1_b)       
+        
         fc2_w = self.weight_variable([4096, 7*7*12])
         fc2_b = self.bias_variable([7*7*12])
-        fc1_out = self.fc(layer4_out_flat, fc1_w, fc1_b)
-        fc2_out = self.fc(fc1_out, fc2_w, fc2_b)   #[7*7*num_classes, 7*7*num_boxes*5]
+        fc2_out = tf.matmul(fc1_out, fc2_w) + fc2_b
+        #fc2_out = self.fc(fc1_out, fc2_w, fc2_b)   #[7*7*num_classes, 7*7*num_boxes*5]
         #fc2_out = tf.reshape(fc2_out, [-1, 7, 7, 7])
-        
-        return fc2_out
+        #print (fc2_out) 
+        return fc2_out #[?, 7*7*12]
     
     def non_max_suppression(self, window, window_size):
         # input: B x W x H x C

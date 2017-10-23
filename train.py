@@ -47,7 +47,7 @@ class Solver:
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
 
         with tf.control_dependencies(update_ops):
-            train_step = tf.train.AdamOptimizer(1e-4).minimize(total_loss)   
+            train_step = tf.train.AdamOptimizer(1e-6).minimize(total_loss)   
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
         
         saver = tf.train.Saver()
