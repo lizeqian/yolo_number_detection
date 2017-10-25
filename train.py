@@ -38,8 +38,9 @@ class Solver:
         image = tf.placeholder(tf.float32, shape=[None, 112,112,1])
         label = tf.placeholder(tf.float32, shape=[None, 7, 7, 7])
         keep_prob = tf.placeholder(tf.float32)
+        global_step = tf.placeholder(tf.int32)
         net_out = self.net.net_4_layers(image, keep_prob)
-        total_loss, accu_iou, accu_class, accu_detect = self.net.loss_function_vec(net_out, label)
+        total_loss, accu_iou, accu_class, accu_detect, acc_fp = self.net.loss_function_vec(net_out, label)
         tf.summary.scalar('total_loss', total_loss)
         tf.summary.scalar('accu_iou', accu_iou)
         tf.summary.scalar('accu_class', accu_class)
@@ -48,9 +49,10 @@ class Solver:
         writer = tf.summary.FileWriter('./log/', sess.graph)
         print ("Network built")
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-
+        starter_learning_rate = 5e-7
+        learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step, 300, 0.7, staircase=False)
         with tf.control_dependencies(update_ops):
-            train_step = tf.train.AdamOptimizer(1e-7).minimize(total_loss)   
+            train_step = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)   
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
         
         saver = tf.train.Saver()
@@ -66,14 +68,17 @@ class Solver:
         print ("Begin Training")
         for epoch in range(0, self.num_epochs):
             image_tensor,image_label = sess.run([image_batch,label_batch])
-            summary, _ = sess.run([merged, train_step], feed_dict={image: image_tensor, label: image_label, keep_prob: 0.5})
+            summary, _ = sess.run([merged, train_step], feed_dict={image: image_tensor, label: image_label, keep_prob: 0.5, global_step: epoch})
             if epoch%100 == 0:
-                loss = total_loss.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0})
-                accuracy_iou = accu_iou.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0})
-                accuracy_class = accu_class.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0})
-                accuracy_detect= accu_detect.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0})
+                loss = total_loss.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
+                accuracy_iou = accu_iou.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
+                accuracy_class = accu_class.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
+                accuracy_detect= accu_detect.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
+                accuracy_fp = acc_fp.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
+                lr = learning_rate.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
                 print (datetime.datetime.now())
-                print ("Loss is %g, detection accuracy is %g, IOU accuracy is %g, class accuracy is %g"%(loss, accuracy_detect, accuracy_iou, accuracy_class))
+                print ("Learning rate is %e"%(lr))
+                print ("Loss is %g, detection accuracy is %g, IOU accuracy is %g, class accuracy is %g, false positive is %g"%(loss, accuracy_detect, accuracy_iou, accuracy_class, accuracy_fp))
             writer.add_summary(summary, epoch)
         writer.close()    
         coord.request_stop()
@@ -86,8 +91,8 @@ class Solver:
 
             
 def main():
-    ne = 3000
-    bs = 100
+    ne = 5000
+    bs = 50
     net = Net(True, bs)
     solver = Solver(ne, bs, net)
     

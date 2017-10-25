@@ -78,6 +78,14 @@ class Net:
         layer4_out = self.conv2d(layer3_out, l4_w, l4_b)
 #        layer5_out = self.conv2d(layer4_out, l5_w, l5_b)
 #        layer6_out = self.conv2d(layer5_out, l6_w, l6_b)
+        self.variable_summaries(l1_w, 'l2_w')
+        self.variable_summaries(l1_b, 'l2_b')
+        self.variable_summaries(l2_w, 'l2_w')
+        self.variable_summaries(l2_b, 'l2_b')
+        self.variable_summaries(l2_w, 'l2_w')
+        self.variable_summaries(l2_b, 'l2_b')
+        self.variable_summaries(l2_w, 'l2_w')
+        self.variable_summaries(l2_b, 'l2_b')
         self.variable_summaries(layer1_out, 'layer1_out')
         self.variable_summaries(layer2_out, 'layer2_out')
         self.variable_summaries(layer3_out, 'layer3_out')
@@ -199,11 +207,17 @@ class Net:
         sel_iou_mask = sel_iou*gt_object
         accu_iou = tf.reduce_mean(tf.reduce_sum(sel_iou_mask, axis=[1,2,3]))
         
+        #class accuracy
         class_predicted = tf.where(tf.greater(predict_class[:,:,:,0], predict_class[:,:,:,1]), tf.ones_like(predict_class[:,:,:,0]), tf.zeros_like(predict_class[:,:,:,0]))
         class_labeled = tf.where(tf.greater(gt_classes[:,:,:,0], gt_classes[:,:,:,1]), tf.ones_like(gt_classes[:,:,:,0]), tf.zeros_like(gt_classes[:,:,:,0]))
         accu_class = tf.reduce_mean(tf.reduce_sum(tf.where(tf.equal(class_predicted, class_labeled), tf.ones_like(class_predicted), tf.zeros_like(class_predicted))*tf.reshape(gt_object, [self.batch_size, self.cell_size, self.cell_size])*tf.reshape(pr_c_nms, [self.batch_size, self.cell_size, self.cell_size]), axis=[1,2]))
         
+        #Detection accuracy
         accu_detect = tf.reduce_mean(tf.reduce_sum(pr_c_nms*gt_object, axis=[1,2,3]))
+        
+        #False positive accuracy
+        gt_noob = tf.where(tf.equal(gt_object, 0), tf.ones_like(gt_object), tf.zeros_like(gt_object))
+        accu_fp = tf.reduce_mean(tf.reduce_sum(pr_c_nms*gt_noob, axis=[1,2,3]))
         
         tf.losses.add_loss(class_loss)
         tf.losses.add_loss(coord_loss)
@@ -213,4 +227,4 @@ class Net:
         self.variable_summaries(coord_loss, 'coord_loss')
         self.variable_summaries(iou_loss, 'iou_loss')
         
-        return tf.losses.get_total_loss(), accu_iou, accu_class, accu_detect
+        return tf.losses.get_total_loss(), accu_iou, accu_class, accu_detect, accu_fp
