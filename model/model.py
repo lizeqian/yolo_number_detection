@@ -30,7 +30,7 @@ class Net:
             [np.arange(7)] * 7 * 2),
             (2, 7, 7)), (1, 2, 0))
         
-    def variable_summaries(self, var, scope): #"""Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
+    def variable_summaries(self, var, scope): 
         with tf.name_scope(scope):
             mean = tf.reduce_mean(var)
             tf.summary.scalar('mean', mean)
@@ -38,8 +38,7 @@ class Net:
                 stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
             tf.summary.scalar('stddev', stddev)
             tf.summary.scalar('max', tf.reduce_max(var))
-            tf.summary.scalar('min', tf.reduce_min(var))
-            tf.summary.histogram('histogram', var)        
+            tf.summary.scalar('min', tf.reduce_min(var))       
 
     def conv2d(self, x, w, b):
         conv_ = tf.nn.conv2d(x, w, strides=[1,1,1,1], padding='SAME')
@@ -53,16 +52,12 @@ class Net:
         return tf.maximum(0.1*relu_, relu_)
 
     def weight_variable(self, shape):
-        initial = tf.truncated_normal(shape, stddev=0.0001)
+        initial = tf.truncated_normal(shape, stddev=0.00001)
         return tf.Variable(initial)
 
     def bias_variable(self, shape):
         initial = tf.constant(0.01, shape=shape)
         return tf.Variable(initial)
-
-    def loss_variable(self, shape):
-        initial = tf.constant(0.0001, shape=shape)
-        return tf.Variable(initial, trainable=False) 
 
     def net_4_layers(self,image,is_training):
         l1_w = self.weight_variable(self.w_layer_1)
@@ -73,27 +68,31 @@ class Net:
         l3_b = self.bias_variable(self.b_layer_3)
         l4_w = self.weight_variable(self.w_layer_4)
         l4_b = self.bias_variable(self.b_layer_4)
-        l5_w = self.weight_variable(self.w_layer_5)
-        l5_b = self.bias_variable(self.b_layer_5)
-        l6_w = self.weight_variable(self.w_layer_6)
-        l6_b = self.bias_variable(self.b_layer_6)
+#        l5_w = self.weight_variable(self.w_layer_5)
+#        l5_b = self.bias_variable(self.b_layer_5)
+#        l6_w = self.weight_variable(self.w_layer_6)
+#        l6_b = self.bias_variable(self.b_layer_6)
         layer1_out = self.conv2d(image, l1_w, l1_b)
         layer2_out = self.conv2d(layer1_out, l2_w, l2_b)
         layer3_out = self.conv2d(layer2_out, l3_w, l3_b)
         layer4_out = self.conv2d(layer3_out, l4_w, l4_b)
 #        layer5_out = self.conv2d(layer4_out, l5_w, l5_b)
 #        layer6_out = self.conv2d(layer5_out, l6_w, l6_b)
-        
+        self.variable_summaries(layer1_out, 'layer1_out')
+        self.variable_summaries(layer2_out, 'layer2_out')
+        self.variable_summaries(layer3_out, 'layer3_out')
+        self.variable_summaries(layer4_out, 'layer4_out')
 #        layer6_out_flat = tf.reshape(layer6_out, [-1, 7*7*self.w_layer_6[3]])
         layer4_out_flat = tf.reshape(layer4_out, [-1, 7*7*self.w_layer_4[3]])
         
         fc1_w = self.weight_variable([7*7*self.w_layer_4[3], 4096])
         fc1_b = self.bias_variable([4096])
         fc1_out = self.fc(layer4_out_flat, fc1_w, fc1_b)       
-        
+        self.variable_summaries(fc1_out, 'fc1_out')
         fc2_w = self.weight_variable([4096, 7*7*12])
         fc2_b = self.bias_variable([7*7*12])
         fc2_out = tf.matmul(fc1_out, fc2_w) + fc2_b
+        self.variable_summaries(fc2_out, 'fc2_out')
         #fc2_out = self.fc(fc1_out, fc2_w, fc2_b)   #[7*7*num_classes, 7*7*num_boxes*5]
         #fc2_out = tf.reshape(fc2_out, [-1, 7, 7, 7])
         #print (fc2_out) 
@@ -135,21 +134,7 @@ class Net:
                 (boxes2[:, :, :, :, 3] - boxes2[:, :, :, :, 1])
                 
         union_square = tf.maximum(square1 + square2 - inter_square, 1e-10)
-        return tf.clip_by_value(inter_square / union_square, 0.0, 1.0)
-
-    def iou_calc_loop(self, boxes0, boxes1): #x, y, w, h
-        inter_lu_x = tf.maximum(boxes0[0]-boxes0[2], boxes1[0]-boxes1[2])
-        inter_lu_y = tf.maximum(boxes0[1]-boxes0[3], boxes1[1]-boxes1[3])
-        inter_rb_x = tf.minimum(boxes0[0]+boxes0[2], boxes1[0]+boxes1[2])
-        inter_rb_y = tf.minimum(boxes0[1]+boxes0[3], boxes1[1]+boxes1[3])
-    
-        inter_delta_x = tf.maximum(0.0, inter_rb_x - inter_lu_x)
-        inter_delta_y = tf.maximum(0.0, inter_rb_y - inter_lu_y)
-        
-        inter_area = inter_delta_x*inter_delta_y
-        iou = inter_area/(boxes0[2]*boxes0[3]+boxes1[2]+boxes1[3]-inter_area)
-        
-        return iou
+        return tf.clip_by_value(inter_square / union_square, 0.0, 1.0) #shape = (batch_size, 7, 7, 2)
         
     
     def loss_function_vec(self, predicts, labels): #labels: [batch_size, cell_size_x, cell_size_y, 2+5] (x, y, w, h, C, p(c0), p(c1)) 
@@ -206,10 +191,19 @@ class Net:
         pr_iou = tf.reduce_max(gt_iou, axis = 3, keep_dims = True)
         pr_class = tf.reduce_max(predict_class, axis = 3, keep_dims = True)
         pr_c = pr_iou * pr_class
-        pr_c_nms = self.non_max_suppression(pr_c, 3)
+        pr_c_nms = self.non_max_suppression(pr_c, 3) #Predicted boxes
+        
         sel_iou = pr_iou*pr_c_nms
-        accu = tf.reduce_mean(tf.reduce_sum(sel_iou, axis=[1,2,3]))
-                
+
+        sel_iou_mask = sel_iou*gt_object
+        accu_iou = tf.reduce_mean(tf.reduce_sum(sel_iou_mask, axis=[1,2,3]))
+        
+        class_predicted = tf.where(tf.greater(predict_class[:,:,:,0], predict_class[:,:,:,1]), tf.ones_like(predict_class[:,:,:,0]), tf.zeros_like(predict_class[:,:,:,0]))
+        class_labeled = tf.where(tf.greater(gt_classes[:,:,:,0], gt_classes[:,:,:,1]), tf.ones_like(gt_classes[:,:,:,0]), tf.zeros_like(gt_classes[:,:,:,0]))
+        accu_class = tf.reduce_mean(tf.reduce_sum(tf.where(tf.equal(class_predicted, class_labeled), tf.ones_like(class_predicted), tf.zeros_like(class_predicted))*tf.reshape(gt_object, [self.batch_size, self.cell_size, self.cell_size])*tf.reshape(pr_c_nms, [self.batch_size, self.cell_size, self.cell_size]), axis=[1,2]))
+        
+        accu_detect = tf.reduce_mean(tf.reduce_sum(pr_c_nms*gt_object, axis=[1,2,3]))
+        
         tf.losses.add_loss(class_loss)
         tf.losses.add_loss(coord_loss)
         tf.losses.add_loss(iou_loss)
@@ -218,58 +212,4 @@ class Net:
         self.variable_summaries(coord_loss, 'coord_loss')
         self.variable_summaries(iou_loss, 'iou_loss')
         
-        return tf.losses.get_total_loss(), accu
-
-    def loss_function(self, predicts, labels): #labels: [batch_size, cell_size_x, cell_size_y, 2+5] (x, y, w, h, C, p(c0), p(c1)) 
-        predict_class = tf.reshape(predicts[:,:7*7*2], [self.batch_size, 7, 7, 2]) #batch_size, cell_size, cell_size, num of class (class score)
-        predict_scales = tf.reshape(predicts[:, 7*7*2:(7*7*2+7*7*2)], [self.batch_size, 7, 7, 2]) #batch_size, cell_size, cell_size, num of boxes (box confidence)
-        predict_boxes = tf.reshape(predicts[:, (7*7*2+7*7*2):], [self.batch_size, 7, 7, 2, 4]) # batch_size, cell_size, cell_size, boxes_num, 4 (box coordinate)
-        
-        #calculate loss
-        class_loss = tf.convert_to_tensor(np.zeros(self.batch_size), dtype=tf.float32)#self.loss_variable([self.batch_size])
-        iou_loss = tf.convert_to_tensor(np.zeros(self.batch_size), dtype=tf.float32)#self.loss_variable([self.batch_size])
-        coord_loss = tf.convert_to_tensor(np.zeros(self.batch_size), dtype=tf.float32)#self.loss_variable([self.batch_size])
-        
-#       for i in range(self.batch_size):
-#           for x in range(7):
-#               for y in range(7):
-#                   if labels[i, x, y, ] == 1:
-#                       class_loss[i] += tf.square(labels[i, x, y, 5]-predict_class[i, x, y, 0]) + tf.square(labels[i, x, y, 6]-predict_class[i, x, y, 1])
-
-        #calculate iou loss 
-
-        label_boxes = labels[:,:,:,:4]
-
-
-        for i in range(self.batch_size):
-            for x in range(7):
-                for y in range(7):
-                    if labels[i, x, y, 4] == 1:
-                        class_loss_a = tf.assign(class_loss[i], tf.square(labels[i, x, y, 5]-predict_class[i, x, y, 0]) + tf.square(labels[i, x, y, 6]-predict_class[i, x, y, 1]) + class_loss[i])
-                    for b in range(2):
-                        boxes0 = predict_boxes[i, x, y, b]
-                        boxes1 = label_boxes[i, x, y]
-                        true_iou = self.iou_calc_loop(boxes0, boxes1)
-                        pred_confidence = predict_scales[i, x, y, b]
-                        if labels[i, x, y, 4] == 1 and pred_confidence == tf.reduce_max(predict_scales[i,x, y, :]):
-                            iou_loss_a = tf.assign(iou_loss[i], tf.square(pred_confidence - true_iou) + iou_loss[i])
-                            coord_loss_a = tf.assign(coord_loss[i], self.lambda_coord*(tf.square(predict_boxes[i, x, y, b, 0]-label_boxes[i, x, y, 0])+  \
-                                                                tf.square(predict_boxes[i, x, y, b, 1]-label_boxes[i, x, y, 1])+  \
-                                                                tf.square(tf.sqrt(predict_boxes[i, x, y, b, 2]-label_boxes[i, x, y, 2]))+  \
-                                                                tf.square(tf.sqrt(predict_boxes[i, x, y, b, 3]-label_boxes[i, x, y, 3]))) + coord_loss[i])
-                        else:
-                            iou_loss_a = tf.assign(iou_loss[i], self.lambda_noobj*tf.square(pred_confidence)+iou_loss[i])
-
-        #calculate coordinate loss 
-
-#       for i in range(self.batch_size):
-#           for x in range(7):
-#               for y in range(7):
-#                   for b in range(2):
-#                       pred_confidence = predict_scales[i, x, y, b]
-#                       if labels[i, x, y, 4] == 1 and pred_confidence == tf.reduce_max(predict_scales[i,x, y, :]):
-        return class_loss + iou_loss + coord_loss
-#        tf.losses.add_loss(class_loss)
-#        tf.losses.add_loss(iou_loss)
-#        tf.losses.add_loss(coord_loss)
-
+        return tf.losses.get_total_loss(), accu_iou, accu_class, accu_detect
