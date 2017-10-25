@@ -37,7 +37,8 @@ class Solver:
         print ("Data loaded")
         image = tf.placeholder(tf.float32, shape=[None, 112,112,1])
         label = tf.placeholder(tf.float32, shape=[None, 7, 7, 7])
-        net_out = self.net.net_4_layers(image, True)
+        keep_prob = tf.placeholder(tf.float32)
+        net_out = self.net.net_4_layers(image, keep_prob)
         total_loss, accu_iou, accu_class, accu_detect = self.net.loss_function_vec(net_out, label)
         tf.summary.scalar('total_loss', total_loss)
         tf.summary.scalar('accu_iou', accu_iou)
@@ -65,12 +66,12 @@ class Solver:
         print ("Begin Training")
         for epoch in range(0, self.num_epochs):
             image_tensor,image_label = sess.run([image_batch,label_batch])
-            summary, _ = sess.run([merged, train_step], feed_dict={image: image_tensor, label: image_label})
+            summary, _ = sess.run([merged, train_step], feed_dict={image: image_tensor, label: image_label, keep_prob: 0.5})
             if epoch%100 == 0:
-                loss = total_loss.eval(feed_dict={image: image_tensor, label: image_label})
-                accuracy_iou = accu_iou.eval(feed_dict={image: image_tensor, label: image_label})
-                accuracy_class = accu_class.eval(feed_dict={image: image_tensor, label: image_label})
-                accuracy_detect= accu_detect.eval(feed_dict={image: image_tensor, label: image_label})
+                loss = total_loss.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0})
+                accuracy_iou = accu_iou.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0})
+                accuracy_class = accu_class.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0})
+                accuracy_detect= accu_detect.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0})
                 print (datetime.datetime.now())
                 print ("Loss is %g, detection accuracy is %g, IOU accuracy is %g, class accuracy is %g"%(loss, accuracy_detect, accuracy_iou, accuracy_class))
             writer.add_summary(summary, epoch)
@@ -85,7 +86,7 @@ class Solver:
 
             
 def main():
-    ne = 10000
+    ne = 3000
     bs = 100
     net = Net(True, bs)
     solver = Solver(ne, bs, net)

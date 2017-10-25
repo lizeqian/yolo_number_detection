@@ -59,7 +59,7 @@ class Net:
         initial = tf.constant(0.01, shape=shape)
         return tf.Variable(initial)
 
-    def net_4_layers(self,image,is_training):
+    def net_4_layers(self,image,keep_prob):
         l1_w = self.weight_variable(self.w_layer_1)
         l1_b = self.bias_variable(self.b_layer_1)
         l2_w = self.weight_variable(self.w_layer_2)
@@ -89,9 +89,10 @@ class Net:
         fc1_b = self.bias_variable([4096])
         fc1_out = self.fc(layer4_out_flat, fc1_w, fc1_b)       
         self.variable_summaries(fc1_out, 'fc1_out')
+        fc1_drop = tf.nn.dropout(fc1_out, keep_prob)
         fc2_w = self.weight_variable([4096, 7*7*12])
         fc2_b = self.bias_variable([7*7*12])
-        fc2_out = tf.matmul(fc1_out, fc2_w) + fc2_b
+        fc2_out = tf.matmul(fc1_drop, fc2_w) + fc2_b
         self.variable_summaries(fc2_out, 'fc2_out')
         #fc2_out = self.fc(fc1_out, fc2_w, fc2_b)   #[7*7*num_classes, 7*7*num_boxes*5]
         #fc2_out = tf.reshape(fc2_out, [-1, 7, 7, 7])
