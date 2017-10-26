@@ -130,7 +130,7 @@ class Net:
         boxes2 = tf.transpose(boxes2, [1, 2, 3, 4, 0])
         
         # calculate the left up point & right down point
-        lu = tf.maximum(boxes1[:, :, :, :, :2],- boxes2[:, :, :, :, :2])
+        lu = tf.maximum(boxes1[:, :, :, :, :2], boxes2[:, :, :, :, :2])
         rd = tf.minimum(boxes1[:, :, :, :, 2:], boxes2[:, :, :, :, 2:])
         
         # intersection
