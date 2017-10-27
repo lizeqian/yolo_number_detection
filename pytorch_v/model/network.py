@@ -7,18 +7,20 @@ import numpy as np
 class Net(nn.Module):
     def __init__(self, batch_size):
         super(Net, self).__init__()
+        self.cell_size = 7
         self.batch_size = batch_size
-        self.conv1 = nn.Conv2d(1, 32, 7)
-        self.conv2 = nn.Conv2d(32, 64, 3)
-        self.conv3 = nn.Conv2d(64, 128, 3)
-        self.conv4 = nn.Conv2d(128, 256, 3)
+        self.conv1 = nn.Conv2d(1, 32, 7, padding=3)
+        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
+        self.conv3 = nn.Conv2d(64, 128, 3, padding=1)
+        self.conv4 = nn.Conv2d(128, 256, 3, padding=1)
         self.pool = nn.MaxPool2d(2, 2)
         self.fc1 = nn.Linear(7* 7 * 256, 4096)
         self.fc2 = nn.Linear(4096, 7*7*12)
         self.offset = torch.arange(0,7).expand(14,7).contiguous().view(2, 7, 7).permute(1, 2, 0).contiguous().view(1,7,7,2).expand(self.batch_size,7,7,2)
-
+        self.offset = Variable(self.offset)
     def forward(self, x, is_training):
         x = self.pool(F.leaky_relu(self.conv1(x)))
+        print (x)
         x = self.pool(F.leaky_relu(self.conv2(x)))
         x = self.pool(F.leaky_relu(self.conv3(x)))
         x = self.pool(F.leaky_relu(self.conv4(x)))
@@ -65,9 +67,8 @@ class Net(nn.Module):
         
         gt_object = labels[:, :, :, 4].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
         gt_boxes = labels[:, :, :, 0:4].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1, 4)
-        gt_boxes = gt_boxes.expand(1, 1, 1, 2, 1)
+        gt_boxes = gt_boxes.expand(self.batch_size, 7, 7, 2, 4)
         gt_classes = labels[:, :, :, 5:]
-        
         predict_boxes_tran = torch.stack([(predict_boxes[:, :, :, :, 0] + self.offset) * 16,
                                           (predict_boxes[:, :, :, :, 1] + self.offset.permute(0, 2, 1, 3)) * 16,
                                            predict_boxes[:, :, :, :, 2] * 112,
