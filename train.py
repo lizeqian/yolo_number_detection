@@ -49,8 +49,8 @@ class Solver:
         writer = tf.summary.FileWriter('./log/', sess.graph)
         print ("Network built")
         update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        starter_learning_rate = 5e-7
-        learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step, 300, 0.7, staircase=False)
+        starter_learning_rate = 2e-7
+        learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step, 300, 0.5, staircase=False)
         with tf.control_dependencies(update_ops):
             train_step = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)   
         init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())

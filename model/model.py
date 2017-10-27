@@ -38,7 +38,8 @@ class Net:
                 stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
             tf.summary.scalar('stddev', stddev)
             tf.summary.scalar('max', tf.reduce_max(var))
-            tf.summary.scalar('min', tf.reduce_min(var))       
+            tf.summary.scalar('min', tf.reduce_min(var))  
+            #tf.summary.histogram('histogram', var)
 
     def conv2d(self, x, w, b):
         conv_ = tf.nn.conv2d(x, w, strides=[1,1,1,1], padding='SAME')
@@ -78,14 +79,14 @@ class Net:
         layer4_out = self.conv2d(layer3_out, l4_w, l4_b)
 #        layer5_out = self.conv2d(layer4_out, l5_w, l5_b)
 #        layer6_out = self.conv2d(layer5_out, l6_w, l6_b)
-        self.variable_summaries(l1_w, 'l2_w')
-        self.variable_summaries(l1_b, 'l2_b')
+        self.variable_summaries(l1_w, 'l1_w')
+        self.variable_summaries(l1_b, 'l1_b')
         self.variable_summaries(l2_w, 'l2_w')
         self.variable_summaries(l2_b, 'l2_b')
-        self.variable_summaries(l2_w, 'l2_w')
-        self.variable_summaries(l2_b, 'l2_b')
-        self.variable_summaries(l2_w, 'l2_w')
-        self.variable_summaries(l2_b, 'l2_b')
+        self.variable_summaries(l3_w, 'l3_w')
+        self.variable_summaries(l3_b, 'l3_b')
+        self.variable_summaries(l4_w, 'l4_w')
+        self.variable_summaries(l4_b, 'l4_b')
         self.variable_summaries(layer1_out, 'layer1_out')
         self.variable_summaries(layer2_out, 'layer2_out')
         self.variable_summaries(layer3_out, 'layer3_out')
@@ -130,7 +131,7 @@ class Net:
         boxes2 = tf.transpose(boxes2, [1, 2, 3, 4, 0])
         
         # calculate the left up point & right down point
-        lu = tf.maximum(boxes1[:, :, :, :, :2],- boxes2[:, :, :, :, :2])
+        lu = tf.maximum(boxes1[:, :, :, :, :2], boxes2[:, :, :, :, :2])
         rd = tf.minimum(boxes1[:, :, :, :, 2:], boxes2[:, :, :, :, 2:])
         
         # intersection
@@ -161,14 +162,14 @@ class Net:
         offset = tf.tile(offset, [self.batch_size, 1, 1, 1])
         predict_boxes_tran = tf.stack([(predict_boxes[:, :, :, :, 0] + offset) * 16,
                                            (predict_boxes[:, :, :, :, 1] + tf.transpose(offset, (0, 2, 1, 3))) * 16,
-                                           tf.square(predict_boxes[:, :, :, :, 2]) * 112,
-                                           tf.square(predict_boxes[:, :, :, :, 3]) * 112])
+                                           (predict_boxes[:, :, :, :, 2]) * 112,
+                                           (predict_boxes[:, :, :, :, 3]) * 112])
         predict_boxes_tran = tf.transpose(predict_boxes_tran, [1, 2, 3, 4, 0])
         
         gt_boxes_tran = tf.stack([(gt_boxes[:, :, :, :, 0] + offset) * 16,
                                            (gt_boxes[:, :, :, :, 1] + tf.transpose(offset, (0, 2, 1, 3))) * 16,
-                                           tf.square(gt_boxes[:, :, :, :, 2]) * 112,
-                                           tf.square(gt_boxes[:, :, :, :, 3]) * 112])
+                                           (gt_boxes[:, :, :, :, 2]) * 112,
+                                           (gt_boxes[:, :, :, :, 3]) * 112])
         gt_boxes_tran = tf.transpose(gt_boxes_tran, [1, 2, 3, 4, 0])
         
         gt_iou = self.iou_calc(predict_boxes_tran, gt_boxes_tran)
