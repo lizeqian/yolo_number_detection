@@ -48,7 +48,7 @@ class Rand_num(Dataset):
         self.classes=('56', '79')
 
     def __getitem__(self, index):
-        print ('\tcalling Dataset:__getitem__ @ idx=%d'%index)
+        #print ('\tcalling Dataset:__getitem__ @ idx=%d'%index)
         img = self.images[index]
         label = self.labels[index]
 
@@ -62,14 +62,16 @@ class Rand_num(Dataset):
         return len(self.images)
 
 if __name__ == '__main__':
-    batch_size = 1
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    torch.backends.cudnn.benchmark = True
+    batch_size = 50
     
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     csv_path = '../data/detection_training.csv'
     img_path = '../data/detection_training'
     dataset = Rand_num(csv_path, img_path, 112, None)
     sampler = RandomSampler(dataset)
-    loader = DataLoader(dataset, batch_size = 1, sampler = sampler, shuffle = False, num_workers=2)
+    loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=2)
 
 #    dataiter = iter(loader)
 #    images, labels = dataiter.next()
@@ -79,16 +81,17 @@ if __name__ == '__main__':
 #    print (images)
     
     net = Net(batch_size)
-    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-    for epoch in range(2): 
-        running_loss = 0.0
+    net.cuda()
+    optimizer = optim.SGD(net.parameters(), lr=0.0001, momentum=0.9)
+    for epoch in range(200): 
         for i, data in enumerate(loader, 0):
             # get the inputs
             inputs, labels = data
+            inputs, labels = inputs.float(), labels.float()
     
             # wrap them in Variable
             
-            inputs, labels = Variable(inputs.float()), Variable(labels.float())
+            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
     
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -102,10 +105,8 @@ if __name__ == '__main__':
     
             # print statistics
             #running_loss += loss.data[0]
-            if i % 100 == 99:    # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 2000))
-                running_loss = 0.0
+            if i % 5 == 0:    # print every 2000 mini-batches
+                print(loss)
     
     print('Finished Training')
 

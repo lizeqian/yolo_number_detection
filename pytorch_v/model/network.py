@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import numpy as np
+import pdb
 
 class Net(nn.Module):
     def __init__(self, batch_size):
@@ -18,9 +19,12 @@ class Net(nn.Module):
         self.fc2 = nn.Linear(4096, 7*7*12)
         self.offset = torch.arange(0,7).expand(14,7).contiguous().view(2, 7, 7).permute(1, 2, 0).contiguous().view(1,7,7,2).expand(self.batch_size,7,7,2)
         self.offset = Variable(self.offset)
+        self.lambda_coord = 5
+        self.lambda_noobj = 0.5
+        
+        
     def forward(self, x, is_training):
         x = self.pool(F.leaky_relu(self.conv1(x)))
-        print (x)
         x = self.pool(F.leaky_relu(self.conv2(x)))
         x = self.pool(F.leaky_relu(self.conv3(x)))
         x = self.pool(F.leaky_relu(self.conv4(x)))
@@ -28,6 +32,7 @@ class Net(nn.Module):
         x = F.leaky_relu(self.fc1(x))
         x = F.dropout(x, training=is_training)
         x = self.fc2(x)
+        x = torch.sigmoid(x)
         return x
     
     def iou_calc(self, boxes1, boxes2): #x, y, w, h
@@ -42,21 +47,38 @@ class Net(nn.Module):
                            boxes2[:, :, :, :, 0] + boxes2[:, :, :, :, 2] / 2.0,
                            boxes2[:, :, :, :, 1] + boxes2[:, :, :, :, 3] / 2.0])
         boxes2 = boxes2.permute(1, 2, 3, 4, 0)
-        
+#        print('boxes1')
+#        print(boxes1)
+#        print('boxes2')
+#        print (boxes2)
         # calculate the left up point & right down point
         lu = torch.max(boxes1[:, :, :, :, :2], boxes2[:, :, :, :, :2])
-        rd = torch.max(boxes1[:, :, :, :, 2:], boxes2[:, :, :, :, 2:])
-        
+        rb = torch.min(boxes1[:, :, :, :, 2:], boxes2[:, :, :, :, 2:])
+#        print('lu')
+#        print(lu)
+#        print('rb')
+#        print(rb)
         # intersection
-        intersection = torch.max(rd - lu, 0.0)
+        intersection = torch.max((rb - lu), Variable(torch.zeros(rb.size())))
         inter_square = intersection[:, :, :, :, 0] * intersection[:, :, :, :, 1]
+#        print('intersection')
+#        print(intersection)
+#        print('inter_square')
+#        print(inter_square)
         
         square1 = (boxes1[:, :, :, :, 2] - boxes1[:, :, :, :, 0]) * \
                 (boxes1[:, :, :, :, 3] - boxes1[:, :, :, :, 1])
         square2 = (boxes2[:, :, :, :, 2] - boxes2[:, :, :, :, 0]) * \
                 (boxes2[:, :, :, :, 3] - boxes2[:, :, :, :, 1])
-                
-        union_square = torch.max(square1 + square2 - inter_square, 1e-10)
+#        print('square1')
+#        print(square1)
+#        print('square2')
+#        print(square2)
+        union_square = square1 + square2 - inter_square
+#        print('uniou_square')
+#        print(union_square)
+#        print('iou')
+#        print(inter_square / union_square)
         return inter_square / union_square #shape = (batch_size, 7, 7, 2)
         
     
@@ -80,11 +102,12 @@ class Net(nn.Module):
                                       gt_boxes[:, :, :, :, 2] * 112,
                                       gt_boxes[:, :, :, :, 3] * 112])
         gt_boxes_tran = gt_boxes_tran.permute(1, 2, 3, 4, 0)
-        
+
         gt_iou = self.iou_calc(predict_boxes_tran, gt_boxes_tran)
-        max_iou = torch.max(gt_iou, 3, keep_dims = True)
-        object_mask = (gt_iou >= max_iou).float() * gt_object
-        noob_mask = torch.from_numpy(np.ones_like(object_mask)) - object_mask
+        max_iou = torch.max(gt_iou, 3, keepdim = True)
+        max_iou=max_iou[0]
+        object_mask = torch.mul(torch.ge(gt_iou,max_iou).float(), gt_object.float())
+        noob_mask = Variable(torch.ones(object_mask.size())) - object_mask
         
         #class loss
         delta_p = gt_classes - predict_class
@@ -103,11 +126,15 @@ class Net(nn.Module):
         #iou loss
         confidence_delta = predict_confidence - gt_iou
         
-        iou_loss = (torch.sum(confidence_delta*object_mask**2)+   \
-                        self.lambda_noobj * torch.sum(confidence_delta*noob_mask**2))/self.batch_size
+        iou_loss = (torch.sum((confidence_delta*object_mask)**2)+   \
+                        self.lambda_noobj * torch.sum((confidence_delta*noob_mask)**2))/self.batch_size
         
-                    
+#        print(class_loss)
+#        print(coord_loss)
+#        print(iou_loss)            
         total_loss = class_loss + coord_loss + iou_loss
+#        print (total_loss)
+#        pdb.set_trace()
         #Accuracy IOU
 #        pr_iou = torch.max(gt_iou, 3, keep_dims = True)
 #        pr_class = torch.max(predict_class, 3, keep_dims = True)
