@@ -58,7 +58,7 @@ class Rand_num(Dataset):
         return img, label
 
     def __len__(self):
-        print ('\tcalling Dataset:__len__')
+#        print ('\tcalling Dataset:__len__')
         return len(self.images)
 
 if __name__ == '__main__':
@@ -83,11 +83,11 @@ if __name__ == '__main__':
     net = Net(batch_size)
     net.cuda()
     optimizer = optim.SGD(net.parameters(), lr=0.0001, momentum=0.9)
-    for epoch in range(200): 
+    for epoch in range(20000): 
         for i, data in enumerate(loader, 0):
             # get the inputs
             inputs, labels = data
-            inputs, labels = inputs.float(), labels.float()
+            inputs, labels = inputs.float()/256, labels.float()
     
             # wrap them in Variable
             
@@ -99,14 +99,18 @@ if __name__ == '__main__':
             # forward + backward + optimize
             #print (inputs)
             outputs = net.forward(inputs, True)
-            loss = net.loss_function_vec(outputs, labels)
+            loss, _ = net.loss_function_vec(outputs, labels)
             loss.backward()
             optimizer.step()
     
             # print statistics
             #running_loss += loss.data[0]
-            if i % 5 == 0:    # print every 2000 mini-batches
+            if epoch % 100 == 0 and i == 0:    # print every 2000 mini-batches
+                print (datetime.datetime.now())
                 print(loss)
+                outputs = net.forward(inputs, False)
+                loss, accu = net.loss_function_vec(outputs, labels, cal_accuracy=True)
+                print (accu)
     
     print('Finished Training')
 

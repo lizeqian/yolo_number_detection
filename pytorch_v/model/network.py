@@ -80,9 +80,8 @@ class Net(nn.Module):
 #        print('iou')
 #        print(inter_square / union_square)
         return inter_square / union_square #shape = (batch_size, 7, 7, 2)
-        
     
-    def loss_function_vec(self, predicts, labels): #labels: [batch_size, cell_size_x, cell_size_y, 2+5] (x, y, w, h, C, p(c0), p(c1)) 
+    def loss_function_vec(self, predicts, labels, cal_accuracy=False): #labels: [batch_size, cell_size_x, cell_size_y, 2+5] (x, y, w, h, C, p(c0), p(c1)) 
         predict_class = predicts[:,:7*7*2].contiguous().view(self.batch_size, 7, 7, 2) #batch_size, cell_size, cell_size, num of class (class score)
         predict_confidence = predicts[:, 7*7*2:(7*7*2+7*7*2)].contiguous().view(self.batch_size, 7, 7, 2) #batch_size, cell_size, cell_size, num of boxes (box confidence)
         predict_boxes = predicts[:, (7*7*2+7*7*2):].contiguous().view(self.batch_size, 7, 7, 2, 4) # batch_size, cell_size, cell_size, boxes_num, 4 (box coordinate)
@@ -165,5 +164,27 @@ class Net(nn.Module):
 #        self.variable_summaries(class_loss, 'class_loss')
 #        self.variable_summaries(coord_loss, 'coord_loss')
 #        self.variable_summaries(iou_loss, 'iou_loss')
-#        
-        return total_loss #tf.losses.get_total_loss(), accu_iou, accu_class, accu_detect, accu_fp
+        accuracy = []
+        if cal_accuracy is False:
+            accuracy = [0,0,0]
+        else:
+            #############detection accuracy###############
+            gt_noob = Variable(torch.ones(gt_object.size())) - gt_object
+            threshold = 0.5
+            max_confidence = torch.max(predict_confidence, 3, keepdim = True)
+            detect_iou = torch.ge(max_confidence[0], threshold).float()
+            detect_iou_tp = detect_iou*gt_object
+            detect_iou_fp = detect_iou*gt_noob
+            detect_tp_accu = torch.sum(detect_iou_tp)/self.batch_size
+            detect_fp_accu = torch.sum(detect_iou_fp)/self.batch_size
+            accuracy.append(detect_tp_accu)
+            accuracy.append(detect_fp_accu)
+            #############iou accuracy#####################
+           
+            #############class accuracy###################
+            
+            
+        return total_loss, accuracy 
+    
+    
+    
