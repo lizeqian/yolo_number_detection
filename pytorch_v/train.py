@@ -13,6 +13,8 @@ from torch.utils.data import DataLoader
 from torch.utils.data.sampler import RandomSampler
 from model.network import Net
 import torch.optim as optim
+from logger import Logger
+
 
 def tensor_to_img(img, mean=0, std=1):
         img = img.numpy()[0]
@@ -64,6 +66,7 @@ class Rand_num(Dataset):
 if __name__ == '__main__':
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
+    logger = Logger('./logs')
     batch_size = 50
     
     print( '%s: calling main function ... ' % os.path.basename(__file__))
@@ -102,15 +105,17 @@ if __name__ == '__main__':
             loss, _ = net.loss_function_vec(outputs, labels)
             loss.backward()
             optimizer.step()
-    
             # print statistics
             #running_loss += loss.data[0]
             if epoch % 100 == 0 and i == 0:    # print every 2000 mini-batches
-                print (datetime.datetime.now())
-                print(loss)
                 outputs = net.forward(inputs, False)
                 loss, accu = net.loss_function_vec(outputs, labels, cal_accuracy=True)
-                print (accu)
+                print (datetime.datetime.now())
+                print(loss.data.cpu().numpy())
+                logger.scalar_summary('loss', loss.data.cpu().numpy(), epoch//100)
+                logger.scalar_summary('Accuracy detection TP', accu[0].data.cpu().numpy(), epoch//100)
+                logger.scalar_summary('Accuracy detection FP', accu[1].data.cpu().numpy(), epoch//100)
+                logger.scalar_summary('Accuracy IOU', accu[2].data.cpu().numpy(), epoch//100)
     
     print('Finished Training')
 

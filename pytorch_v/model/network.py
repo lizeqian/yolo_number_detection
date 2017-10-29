@@ -180,8 +180,10 @@ class Net(nn.Module):
             accuracy.append(detect_tp_accu)
             accuracy.append(detect_fp_accu)
             #############iou accuracy#####################
-           
+            iou_accu = torch.sum(max_confidence[0]*detect_iou_tp)/self.batch_size
+            accuracy.append(iou_accu)
             #############class accuracy###################
+            
             
             
         return total_loss, accuracy 
