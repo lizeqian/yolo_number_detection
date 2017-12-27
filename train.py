@@ -1,103 +1,134 @@
-import tensorflow as tf
+import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
+import torch
+from torchvision import models, transforms
+from torch.autograd import Variable
 import datetime
-import os
-import argparse
+import cv2
 import glob
+import os
+from torch.utils.data.dataset import Dataset
+from torch.utils.data import DataLoader
+from torch.utils.data.sampler import RandomSampler
+from model.network import Net
+import torch.optim as optim
+from logger import Logger
 
-from model.model import Net
 
-def read_image(filename_queue):
-    label = filename_queue[1]
-    file_contents = tf.read_file(filename_queue[0])
-    image = tf.image.decode_jpeg(file_contents)
-    return image, label
+def tensor_to_img(img, mean=0, std=1):
+        img = img.numpy()[0]
+        img = (img*std+ mean)
+        img = img.astype(np.uint8)
+        #img = cv2.cvtColor(img , cv2.COLOR_BGR2RGB)
+        return img
 
 class Solver:
-    def __init__(self, num_epochs, batch_size,  net):
-        self.num_epochs = num_epochs
-        self.net = net
+    def __init__(self, batch_size, epoch_num, net):
         self.batch_size = batch_size
-    
-    def load_data(self, image_dir, label_dir):
-        image_path = image_dir+'/*.png'
-        image_addrs = glob.glob(image_path)  
-        image_labels = np.genfromtxt(label_dir, delimiter=',')
-        image_labels = np.reshape(image_labels, [-1, 7, 7, 7])
-        filename_queue = tf.train.slice_input_producer([image_addrs, image_labels], num_epochs=self.num_epochs, shuffle=False)
-        image, label = read_image(filename_queue)
-        image.set_shape((112, 112, 1))
-        image_batch, label_batch = tf.train.batch([image, label], batch_size=self.batch_size)
-        return image_batch, label_batch
+        self.epoch_num = epoch_num
+        self.net = net
         
-    def train(self):
-        sess = tf.InteractiveSession()
-        
-        image_batch, label_batch = self.load_data('detection_training', 'detection_training.csv')
-        print ("Data loaded")
-        image = tf.placeholder(tf.float32, shape=[None, 112,112,1])
-        label = tf.placeholder(tf.float32, shape=[None, 7, 7, 7])
-        keep_prob = tf.placeholder(tf.float32)
-        global_step = tf.placeholder(tf.int32)
-        net_out = self.net.net_4_layers(image, keep_prob)
-        total_loss, accu_iou, accu_class, accu_detect, acc_fp = self.net.loss_function_vec(net_out, label)
-        tf.summary.scalar('total_loss', total_loss)
-        tf.summary.scalar('accu_iou', accu_iou)
-        tf.summary.scalar('accu_class', accu_class)
-        tf.summary.scalar('accu_detect', accu_detect)
-        merged = tf.summary.merge_all()
-        writer = tf.summary.FileWriter('./log/', sess.graph)
-        print ("Network built")
-        update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        starter_learning_rate = 2e-7
-        learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step, 300, 0.5, staircase=False)
-        with tf.control_dependencies(update_ops):
-            train_step = tf.train.AdamOptimizer(learning_rate).minimize(total_loss)   
-        init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
-        
-        saver = tf.train.Saver()
         
 
-        sess.run(init_op)
-        if False:
-            saver.restore(sess, "./tmp/My_Model.ckpt")
-            print("Model restored.")
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord)
+class Rand_num(Dataset):
+    def __init__(self, csv_path, img_path, img_size, transform=None):
+        csv_path = csv_path
+        img_paths = img_path+'/*.jpg'
+        image_addrs = glob.glob(img_paths)
+        image_labels = np.genfromtxt(csv_path, delimiter=',')
+        image_labels.flatten()       
+        self.num_classes = 16
+        image_labels = np.reshape(image_labels, [-1, 7, 7, self.num_classes+5])
+        N = len(image_addrs)
+        assert N==np.shape(image_labels)[0]
+        images = np.zeros((N, 1, img_size, img_size), dtype=np.uint8)
 
-        print ("Begin Training")
-        for epoch in range(0, self.num_epochs):
-            image_tensor,image_label = sess.run([image_batch,label_batch])
-            summary, _ = sess.run([merged, train_step], feed_dict={image: image_tensor, label: image_label, keep_prob: 0.5, global_step: epoch})
-            if epoch%100 == 0:
-                loss = total_loss.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
-                accuracy_iou = accu_iou.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
-                accuracy_class = accu_class.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
-                accuracy_detect= accu_detect.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
-                accuracy_fp = acc_fp.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
-                lr = learning_rate.eval(feed_dict={image: image_tensor, label: image_label, keep_prob: 1.0, global_step: epoch})
-                print (datetime.datetime.now())
-                print ("Learning rate is %e"%(lr))
-                print ("Loss is %g, detection accuracy is %g, IOU accuracy is %g, class accuracy is %g, false positive is %g"%(loss, accuracy_detect, accuracy_iou, accuracy_class, accuracy_fp))
-            writer.add_summary(summary, epoch)
-        writer.close()    
-        coord.request_stop()
-        coord.join(threads)
-        
-        save_path = saver.save(sess, "./tmp/My_Model.ckpt")
-        print("Model saved in file: %s" % save_path)
+        for n in range(N):
+            image_addr = img_path+'/'+str(n)+'.jpg'
+            images[n] = np.expand_dims(cv2.imread(image_addr,0), 0)
+        self.transform = transform
+        self.images=images
+        self.labels=image_labels
 
+    def __getitem__(self, index):
+        #print ('\tcalling Dataset:__getitem__ @ idx=%d'%index)
+        img = self.images[index]
+        label = self.labels[index]
 
+        if self.transform is not None:
+            img = self.transform(img)
 
-            
-def main():
-    ne = 5000
-    bs = 50
-    net = Net(True, bs)
-    solver = Solver(ne, bs, net)
-    
-    solver.train()
-    
+        return img, label
+
+    def __len__(self):
+#        print ('\tcalling Dataset:__len__')
+        return len(self.images)
+
 if __name__ == '__main__':
-    main()
+    SAVE_PATH = './checkpoint/cp14.bin'
+    torch.set_default_tensor_type('torch.cuda.FloatTensor')
+    torch.backends.cudnn.benchmark = True
+    logger = Logger('./logs')
+    batch_size = 100
+    load_checkpoint= False
+    
+    print( '%s: calling main function ... ' % os.path.basename(__file__))
+    csv_path = '../data/detection_training.csv'
+    img_path = '../data/detection_training'
+    dataset = Rand_num(csv_path, img_path, 112, None)
+    sampler = RandomSampler(dataset)
+    loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=2)
+
+#    dataiter = iter(loader)
+#    images, labels = dataiter.next()
+#    print (images)
+#    images=tensor_to_img(images)
+#    print (labels)
+#    print (images)
+    
+    net = Net(batch_size)
+    if load_checkpoint:
+        net.load_state_dict(torch.load(SAVE_PATH))
         
+    net.cuda()
+        
+    optimizer = optim.Adam(net.parameters(), lr=0.0001)
+    for epoch in range(2000): 
+        for i, data in enumerate(loader, 0):
+            # get the inputs
+            inputs, labels = data
+            inputs, labels = inputs.float()/256, labels.float()
+    
+            # wrap them in Variable
+            
+            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+    
+            # zero the parameter gradients
+            optimizer.zero_grad()
+    
+            # forward + backward + optimize
+            #print (inputs)
+            outputs = net.forward(inputs, True)
+            loss, _ = net.loss_function_vec(outputs, labels, 0.5)
+            loss.backward()
+            optimizer.step()
+            # print statistics
+            #running_loss += loss.data[0]
+            if epoch % 1 == 0 and i == 0:  
+                outputs = net.forward(inputs, False)
+                loss, accu = net.loss_function_vec(outputs, labels, 0.5, cal_accuracy=True)
+                print (datetime.datetime.now())
+                print ('Epoch %g'%(epoch))
+                print(loss.data.cpu().numpy())
+#                print(accu)
+                logger.scalar_summary('loss', loss.data.cpu().numpy(), epoch)
+                logger.scalar_summary('Accuracy detection TP', accu[0].data.cpu().numpy(), epoch)
+                logger.scalar_summary('Accuracy detection FP', accu[1].data.cpu().numpy(), epoch)
+                logger.scalar_summary('Accuracy IOU', accu[2].data.cpu().numpy(), epoch)
+#                logger.scalar_summary('Accuracy Class', accu[3].data.cpu().numpy(), epoch)
+            if epoch % 1 == 0 and i==0:
+                torch.save(net.state_dict(), SAVE_PATH)
+    torch.save(net.state_dict(), SAVE_PATH)
+    print('Finished Training')
+
