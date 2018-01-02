@@ -98,7 +98,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 1000
+    num_training = 50
     num_val = 0
     num_test = 0
 
