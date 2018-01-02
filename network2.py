@@ -154,7 +154,7 @@ class Net(nn.Module):
 #        print(class_loss)
 #        print(coord_loss)
 #        print(iou_loss)
-        total_loss = class_loss + coord_loss + iou_loss
+        total_loss = coord_loss + iou_loss
 #        print (total_loss)
 #        pdb.set_trace()
 

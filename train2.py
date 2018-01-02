@@ -58,10 +58,10 @@ class Rand_num(Dataset):
         return len(self.labels)
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp.bin'
+    SAVE_PATH = './checkpoint/cp2.bin'
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
-    logger = Logger('./logs')
+    logger = Logger('./logs2')
     batch_size = 50
     load_checkpoint= True
 
@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
     net.cuda()
 
-    optimizer = optim.Adam(net.parameters(), lr=0.0000001)
+    optimizer = optim.Adam(net.parameters(), lr=0.000001)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):
             # get the inputs
