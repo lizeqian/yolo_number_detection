@@ -34,26 +34,18 @@ class Solver:
 class Rand_num(Dataset):
     def __init__(self, csv_path, img_path, img_size, transform=None):
         csv_path = csv_path
-        img_paths = img_path+'/*.jpg'
-        image_addrs = glob.glob(img_paths)
+        self.img_paths = img_path
         image_labels = np.genfromtxt(csv_path, delimiter=',')
         image_labels.flatten()
-        image_labels = np.reshape(image_labels, [-1, 7, 7, 21])
-        N = len(image_addrs)
-        assert N==np.shape(image_labels)[0]
-        images = np.zeros((N, 1, img_size, img_size), dtype=np.uint8)
+        self.num_classes = 13
+        image_labels = np.reshape(image_labels, [-1, 14, 14, self.num_classes+5])
 
-        for n in range(N):
-            image_addr = img_path+'/'+str(n)+'.jpg'
-            images[n] = np.expand_dims(cv2.imread(image_addr,0), 0)
         self.transform = transform
-        self.images=images
         self.labels=image_labels
-        self.classes=('56', '79')
 
     def __getitem__(self, index):
-        #print ('\tcalling Dataset:__getitem__ @ idx=%d'%index)
-        img = self.images[index]
+        image_addr = self.img_paths+'/'+str(index)+'.jpg'
+        img = np.expand_dims(cv2.imread(image_addr,0), 0)
         label = self.labels[index]
 
         if self.transform is not None:
@@ -63,24 +55,24 @@ class Rand_num(Dataset):
 
     def __len__(self):
 #        print ('\tcalling Dataset:__len__')
-        return len(self.images)
+        return len(self.labels)
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp100000.bin'
+    SAVE_PATH = './checkpoint/cp.bin'
 #    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 #    torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
-    batch_size = 100
+    batch_size = 50
     load_checkpoint= True
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = '../data/detection_test.csv'
-    img_path = '../data/detection_test'
-    dataset = Rand_num(csv_path, img_path, 112, None)
+    csv_path = '../data/test.csv'
+    img_path = '../data/test'
+    dataset = Rand_num(csv_path, img_path, 224, None)
     sampler = SequentialSampler(dataset)
-    loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=2)
+    loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)
     print("data loaded")
 #    dataiter = iter(loader)
 #    images, labels = dataiter.next()
@@ -111,7 +103,8 @@ if __name__ == '__main__':
         inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
 
 #                threshold=0.5
-        outputs = net.forward(inputs, False)
+        net.eval()
+        outputs = net.forward(inputs)
         loss, accu = net.loss_function_vec(outputs, labels, threshold, cal_accuracy=True)
 
         
@@ -124,42 +117,6 @@ if __name__ == '__main__':
         accu_iou.append(accu[2].data.cpu().numpy()[0])
                 
 
-#            img = (inputs*256).data.cpu().int().numpy()[0,0]
-#            predict_boxes = outputs[:, (7*7*2+7*7*2):].contiguous().view(1, 7, 7, 2, 4)
-#            predict_confidence = outputs[:, 7*7*2:(7*7*2+7*7*2)].contiguous().view(1, 7, 7, 2)
-#            predict_class = outputs[:,:7*7*2].contiguous().view(1, 7, 7, 2)
-#            max_confidence = torch.max(predict_confidence, 3, keepdim = True)
-#            threshold = 0.5
-#            detect_ob = torch.ge(max_confidence[0], threshold).float()
-#            font = cv2.FONT_HERSHEY_SIMPLEX
-##            for y in range(7):
-##                for x in range(7):
-##                    if labels.data.cpu().numpy()[0,y,x,4]==1:
-##                        xp, yp, w, h = labels.data.cpu().numpy()[0,y,x,:4]
-##                        lu = (int((x+xp)*16-w*112/2), int((y+yp)*16-h*112/2))
-##                        rb = (int((x+xp)*16+w*112/2), int((y+yp)*16+h*112/2))
-##                        cv2.rectangle(img, lu, rb, 200)
-#            for y in range(7):
-#                for x in range(7):
-#                    if detect_ob.data.cpu().numpy()[0, y, x, 0] == 1:
-#                        selection = max_confidence[1].data.cpu().numpy()[0,y,x,0]
-#                        class_ = predict_class.data.cpu().numpy()[0,y,x,1] > predict_class.data.cpu().numpy()[0,y,x,0]
-#                        xp, yp, w, h = predict_boxes.data.cpu().numpy()[0,y,x,selection]
-#        #                print((xp, yp, w, h))
-#        #                print((x,y))
-#                        lu = (int((x+xp)*16-w*112/2), int((y+yp)*16-h*112/2))
-#                        rb = (int((x+xp)*16+w*112/2), int((y+yp)*16+h*112/2))
-#                        if class_ == 0:
-#                            color = 255
-#                        else :
-#                            color = 100
-#                        cv2.rectangle(img, lu, rb, color)
-#        #                print(lu)
-#        #                print(rb)
-#
-#            write_path = '../bounding_boxes/'+str(i)+'.png'
-#            cv2.imwrite(write_path,img)
-#    print('Finished Marking')
 
 
     
