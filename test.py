@@ -11,7 +11,7 @@ import os
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler
-from model.network import Net
+from network import Net
 import torch.optim as optim
 from logger import Logger
 
@@ -28,8 +28,8 @@ class Solver:
         self.batch_size = batch_size
         self.epoch_num = epoch_num
         self.net = net;
-        
-        
+
+
 
 class Rand_num(Dataset):
     def __init__(self, csv_path, img_path, img_size, transform=None):
@@ -66,10 +66,10 @@ if __name__ == '__main__':
     load_checkpoint= True
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
-    
+
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = '../data/test.csv'
-    img_path = '../data/test'
+    csv_path = 'test.csv'
+    img_path = 'test'
     dataset = Rand_num(csv_path, img_path, 224, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)
@@ -80,13 +80,13 @@ if __name__ == '__main__':
 #    images=tensor_to_img(images)
 #    print (labels)
 #    print (images)
-    
+
     net = Net(batch_size)
     if load_checkpoint:
         net.load_state_dict(torch.load(SAVE_PATH))
         print("Model loaded")
 #    net.cuda()
-        
+
     thld = np.arange(0,1,0.05)
     accu_tp=[]
     accu_fp=[]
@@ -99,7 +99,7 @@ if __name__ == '__main__':
         inputs, labels = inputs.float()/256, labels.float()
 
         # wrap them in Variable
-        
+
         inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
 
 #                threshold=0.5
@@ -107,7 +107,7 @@ if __name__ == '__main__':
         outputs = net.forward(inputs)
         loss, accu = net.loss_function_vec(outputs, labels, threshold, cal_accuracy=True)
 
-        
+
 #            print (datetime.datetime.now())
 #            print ('Epoch %g'%(epoch))
         print(loss.data.cpu().numpy())
@@ -115,12 +115,12 @@ if __name__ == '__main__':
         accu_tp.append(accu[0].data.cpu().numpy()[0])
         accu_fp.append(accu[1].data.cpu().numpy()[0])
         accu_iou.append(accu[2].data.cpu().numpy()[0])
-                
 
 
 
-    
 
 
-    
+
+
+
 
