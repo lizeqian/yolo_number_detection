@@ -68,7 +68,7 @@ if __name__ == '__main__':
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     csv_path = 'train14.csv'
     img_path = 'train14'
-    dataset = Rand_num(csv_path, img_path, 448, None)
+    dataset = Rand_num(csv_path, img_path, 224, None)
     sampler = RandomSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=2)
 
@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
     net.cuda()
 
-    optimizer = optim.Adam(net.parameters(), lr=0.0000001)
+    optimizer = optim.Adam(net.parameters(), lr=0.0001)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):
             # get the inputs

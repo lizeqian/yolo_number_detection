@@ -28,8 +28,8 @@ class Solver:
         self.batch_size = batch_size
         self.epoch_num = epoch_num
         self.net = net;
-        
-        
+
+
 
 class Rand_num(Dataset):
     def __init__(self, csv_path, img_path, img_size, transform=None):
@@ -67,7 +67,7 @@ if __name__ == '__main__':
     num_cells = 14
     num_classes = 13
     img_size = 224
-    
+
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     csv_path = 'test.csv'
     img_path = 'test'
@@ -81,32 +81,33 @@ if __name__ == '__main__':
 #    images=tensor_to_img(images)
 #    print (labels)
 #    print (images)
-    
+
     net = Net(batch_size)
     if load_checkpoint:
         net.load_state_dict(torch.load(SAVE_PATH))
-        
+
     net.cuda()
-        
+
     thld = np.arange(0,1,0.05)
     accu_tp=[]
     accu_fp=[]
     accu_iou=[]
-    for epoch in range(1): 
+    for epoch in range(1):
         for i, data in enumerate(loader, 0):
                 # get the inputs
             inputs, labels = data
             inputs, labels = inputs.float()/256, labels.float()
-#        
+#
 #                # wrap them in Variable
-#                
+#
             inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-#    
+#
             threshold=0.2
-            outputs = net.forward(inputs, False)
+            net.eval()
+            outputs = net.forward(inputs)
 #            loss, accu = net.loss_function_vec(outputs, labels, threshold, cal_accuracy=True)
-#    
-#                
+#
+#
 #    #            print (datetime.datetime.now())
 #    #            print ('Epoch %g'%(epoch))
 #                print(loss.data.cpu().numpy())
@@ -114,7 +115,7 @@ if __name__ == '__main__':
 #                accu_tp.append(accu[0].data.cpu().numpy()[0])
 #                accu_fp.append(accu[1].data.cpu().numpy()[0])
 #                accu_iou.append(accu[2].data.cpu().numpy()[0])
-#                
+#
 #    plt.plot(thld, accu_tp, 'r')
 #    plt.plot(thld, accu_fp, 'b')
 #    plt.plot(thld, accu_iou, 'g')
@@ -127,7 +128,7 @@ if __name__ == '__main__':
             max_confidence = torch.max(predict_confidence, 3, keepdim = True)
             threshold = 0.2
             detect_ob = torch.ge(max_confidence[0], threshold).float()
-            font = cv2.FONT_HERSHEY_PLAIN 
+            font = cv2.FONT_HERSHEY_PLAIN
             directory = os.path.dirname('../bounding_boxes_100/')
             if not os.path.exists(directory):
                 os.makedirs(directory)
@@ -169,8 +170,8 @@ if __name__ == '__main__':
     print('Finished Marking')
 
 
-    
 
 
-    
+
+
 
