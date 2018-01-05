@@ -37,7 +37,7 @@ class Rand_num(Dataset):
         self.img_paths = img_path
         image_labels = np.genfromtxt(csv_path, delimiter=',')
         image_labels.flatten()
-        self.num_classes = 13
+        self.num_classes = 16
         image_labels = np.reshape(image_labels, [-1, 14, 14, self.num_classes+5])
 
         self.transform = transform
@@ -85,7 +85,8 @@ if __name__ == '__main__':
 
     net.cuda()
 
-    optimizer = optim.Adam(net.parameters(), lr=0.0001)
+    optimizer = optim.Adam(net.parameters(), lr=0.01)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose = True)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):
             # get the inputs
@@ -105,7 +106,7 @@ if __name__ == '__main__':
             outputs = net.forward(inputs)
             loss, _ = net.loss_function_vec(outputs, labels, 0.5)
             loss.backward()
-            optimizer.step()
+            scheduler.step(loss)
             # print statistics
             #running_loss += loss.data[0]
             if epoch % 1 == 0 and i == 0:

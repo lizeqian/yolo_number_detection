@@ -10,8 +10,9 @@ import math
 class Net(nn.Module):
     def __init__(self, batch_size):
         super(Net, self).__init__()
-        self.num_classes = 13
+        self.num_classes = 16
         self.cell_size = 14
+        self.img_size=224
         self.batch_size = batch_size
         self.conv1 = nn.Conv2d(1, 32, 7, padding=3)
         self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
@@ -40,9 +41,9 @@ class Net(nn.Module):
         x = self.pool(F.leaky_relu(self.batchnorm4(self.conv4(x))))
         #x = self.pool(F.leaky_relu(self.batchnorm5(self.conv5(x))))
         x = x.contiguous().view(-1, self.cell_size* self.cell_size * 256)
-        x = F.leaky_relu(self.fc1(x))
-        x = F.dropout(x)
-        x = self.fc2(x)
+#        x = F.leaky_relu(self.fc1(x))
+#        x = F.dropout(x)
+#        x = self.fc2(x)
         x = torch.sigmoid(x)
         return x
 
@@ -81,8 +82,8 @@ class Net(nn.Module):
                 (boxes1[:, :, :, :, 3] - boxes1[:, :, :, :, 1])
         square2 = (boxes2[:, :, :, :, 2] - boxes2[:, :, :, :, 0]) * \
                 (boxes2[:, :, :, :, 3] - boxes2[:, :, :, :, 1])
-        square1 = torch.clamp(square1, 0.00001, 112*112)
-        square2 = torch.clamp(square2, 0.00001, 112*112)
+        square1 = torch.clamp(square1, 0.00001, self.img_size*self.img_size)
+        square2 = torch.clamp(square2, 0.00001, self.img_size*self.img_size)
 #        print('square1')
 #        print(square1)
 #        print('square2')
@@ -115,14 +116,14 @@ class Net(nn.Module):
         gt_classes = labels[:, :, :, 5:]
         predict_boxes_tran = torch.stack([(predict_boxes[:, :, :, :, 0] + self.offset) * 16,
                                           (predict_boxes[:, :, :, :, 1] + self.offset.permute(0, 2, 1, 3)) * 16,
-                                           predict_boxes[:, :, :, :, 2] * 112,
-                                           predict_boxes[:, :, :, :, 3] * 112])
+                                           predict_boxes[:, :, :, :, 2] * self.img_size,
+                                           predict_boxes[:, :, :, :, 3] * self.img_size])
         predict_boxes_tran = predict_boxes_tran.permute(1, 2, 3, 4, 0)
 
         gt_boxes_tran = torch.stack([(gt_boxes[:, :, :, :, 0] + self.offset) * 16,
                                      (gt_boxes[:, :, :, :, 1] + self.offset.permute(0, 2, 1, 3)) * 16,
-                                      gt_boxes[:, :, :, :, 2] * 112,
-                                      gt_boxes[:, :, :, :, 3] * 112])
+                                      gt_boxes[:, :, :, :, 2] * self.img_size,
+                                      gt_boxes[:, :, :, :, 3] * self.img_size])
         gt_boxes_tran = gt_boxes_tran.permute(1, 2, 3, 4, 0)
 
         gt_iou = self.iou_calc(predict_boxes_tran, gt_boxes_tran)
