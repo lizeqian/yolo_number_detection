@@ -78,7 +78,7 @@ def random_placement(addrs, pic_w, pic_h, num_classes):
 
 if __name__ == '__main__':
 
-    dataset_name = 'test'
+    dataset_name = 'data16'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
     img_size = 224
     cell_w = img_size/cell_num
 
-    num_classes = 13
+    num_classes = 16
 
     for i in range(num_classes):
 #        import os
@@ -98,7 +98,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 50
+    num_training = 100000
     num_val = 0
     num_test = 0
 

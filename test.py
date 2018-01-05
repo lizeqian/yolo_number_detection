@@ -91,30 +91,40 @@ if __name__ == '__main__':
     accu_tp=[]
     accu_fp=[]
     accu_iou=[]
+    accu_cls=[]
 
     threshold = 0.2
-    for i, data in enumerate(loader, 0):
-        # get the inputs
-        inputs, labels = data
-        inputs, labels = inputs.float()/256, labels.float()
+    for threshold in thld:
+        for i, data in enumerate(loader, 0):
+            # get the inputs
+            inputs, labels = data
+            inputs, labels = inputs.float()/256, labels.float()
 
-        # wrap them in Variable
+            # wrap them in Variable
 
-        inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
 
-#                threshold=0.5
-        net.eval()
-        outputs = net.forward(inputs)
-        loss, accu = net.loss_function_vec(outputs, labels, threshold, cal_accuracy=True)
+#                    threshold=0.5
+            net.eval()
+            outputs = net.forward(inputs)
+            loss, accu = net.loss_function_vec(outputs, labels, threshold, cal_accuracy=True)
 
 
-#            print (datetime.datetime.now())
-#            print ('Epoch %g'%(epoch))
-        print(loss.data.cpu().numpy())
-        print(accu)
-        accu_tp.append(accu[0].data.cpu().numpy()[0])
-        accu_fp.append(accu[1].data.cpu().numpy()[0])
-        accu_iou.append(accu[2].data.cpu().numpy()[0])
+#                print (datetime.datetime.now())
+#                print ('Epoch %g'%(epoch))
+            #print(loss.data.cpu().numpy())
+            print("thld is %g"%(threshold))
+            print(accu)
+            accu_tp.append(accu[0].data.cpu().numpy()[0])
+            accu_fp.append(accu[1].data.cpu().numpy()[0])
+            accu_iou.append(accu[2].data.cpu().numpy()[0])
+            accu_cls.append(accu[3].data.cpu().numpy()[0])
+
+    print("overall result")
+    print(accu_tp)
+    print(accu_fp)
+    print(accu_iou)
+    print(accu_cls)
 
 
 
