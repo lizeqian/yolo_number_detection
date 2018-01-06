@@ -14,7 +14,7 @@ from torch.utils.data.sampler import RandomSampler
 from network import Net
 import torch.optim as optim
 from logger import Logger
-
+import torch.optim.lr_scheduler as lr_scheduler
 
 def tensor_to_img(img, mean=0, std=1):
         img = img.numpy()[0]
@@ -37,7 +37,7 @@ class Rand_num(Dataset):
         self.img_paths = img_path
         image_labels = np.genfromtxt(csv_path, delimiter=',')
         image_labels.flatten()
-        self.num_classes = 13
+        self.num_classes = 16
         image_labels = np.reshape(image_labels, [-1, 14, 14, self.num_classes+5])
 
         self.transform = transform
@@ -62,15 +62,20 @@ if __name__ == '__main__':
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs2')
-    batch_size = 50
-    load_checkpoint= True
+    batch_size = 10
+    load_checkpoint= False
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'train14.csv'
-    img_path = 'train14'
-    dataset = Rand_num(csv_path, img_path, 448, None)
+    csv_path = 'data16.csv'
+    img_path = 'data16'
+    validation_label = 'validation.csv'
+    validation_data = 'validation'
+    dataset = Rand_num(csv_path, img_path, 224, None)
+    validationset = Rand_num(validation_label, validation_data, 224, None)
     sampler = RandomSampler(dataset)
+    val_sampler = RandomSampler(validationset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=2)
+    val_loader = DataLoader(validationset, batch_size = batch_size, sampler = val_sampler, shuffle = False, num_workers=2)
 
 #    dataiter = iter(loader)
 #    images, labels = dataiter.next()
@@ -85,7 +90,8 @@ if __name__ == '__main__':
 
     net.cuda()
 
-    optimizer = optim.Adam(net.parameters(), lr=0.000001)
+    optimizer = optim.Adam(net.parameters(), lr=0.00001)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):
             # get the inputs
@@ -108,21 +114,36 @@ if __name__ == '__main__':
             optimizer.step()
             # print statistics
             #running_loss += loss.data[0]
-            if epoch % 1 == 0 and i == 0:
-                net.eval()
-                outputs = net.forward(inputs)
-                loss, accu = net.loss_function_vec(outputs, labels, 0.5, cal_accuracy=True)
-                print (datetime.datetime.now())
-                print ('Epoch %g'%(epoch))
-                print(loss.data.cpu().numpy())
-#                print(accu)
-                logger.scalar_summary('loss', loss.data.cpu().numpy(), epoch)
-                logger.scalar_summary('Accuracy detection TP', accu[0].data.cpu().numpy(), epoch)
-                logger.scalar_summary('Accuracy detection FP', accu[1].data.cpu().numpy(), epoch)
-                logger.scalar_summary('Accuracy IOU', accu[2].data.cpu().numpy(), epoch)
-#                logger.scalar_summary('Accuracy Class', accu[3].data.cpu().numpy(), epoch)
+            #if epoch % 1 == 0 and i == 0:
+            #    net.eval()
+            #    outputs = net.forward(inputs)
+            #    loss, accu = net.loss_function_vec(outputs, labels, 0.5, cal_accuracy=True)
+            #    print (datetime.datetime.now())
+            #    print ('Epoch %g'%(epoch))
+            #    print(loss.data.cpu().numpy())
+#           #     print(accu)
+            #    logger.scalar_summary('loss', loss.data.cpu().numpy(), epoch)
+            #    logger.scalar_summary('Accuracy detection TP', accu[0].data.cpu().numpy(), epoch)
+            #    logger.scalar_summary('Accuracy detection FP', accu[1].data.cpu().numpy(), epoch)
+            #    logger.scalar_summary('Accuracy IOU', accu[2].data.cpu().numpy(), epoch)
+#           #     logger.scalar_summary('Accuracy Class', accu[3].data.cpu().numpy(), epoch)
             if epoch % 1 == 0 and i==0:
                 torch.save(net.state_dict(), SAVE_PATH)
+        total_loss=[]
+        for i, data in enumerate(val_loader, 0):
+            inputs, labels = data
+            inputs, labels = inputs.float()/256, labels.float()
+            inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile = True)
+            optimizer.zero_grad()
+            net.eval()
+            outputs = net.forward(inputs)
+            loss, _ = net.loss_function_vec(outputs, labels, 0.2)
+            total_loss.append(loss.data.cpu().numpy())
+        mean_loss = np.mean(total_loss)
+        print('val loss is %g'%(mean_loss))
+        scheduler.step(mean_loss)
+
+
     torch.save(net.state_dict(), SAVE_PATH)
     print('Finished Training')
 

@@ -41,9 +41,9 @@ class Net(nn.Module):
         x = self.pool(F.leaky_relu(self.batchnorm4(self.conv4(x))))
         #x = self.pool(F.leaky_relu(self.batchnorm5(self.conv5(x))))
         x = x.contiguous().view(-1, self.cell_size* self.cell_size * 256)
-#        x = F.leaky_relu(self.fc1(x))
-#        x = F.dropout(x)
-#        x = self.fc2(x)
+        x = F.leaky_relu(self.fc1(x))
+        x = F.dropout(x)
+        x = self.fc2(x)
         x = torch.sigmoid(x)
         return x
 

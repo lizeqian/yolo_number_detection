@@ -78,7 +78,7 @@ def random_placement(addrs, pic_w, pic_h, num_classes):
 
 if __name__ == '__main__':
 
-    dataset_name = 'data16'
+    dataset_name = 'validation'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
 
@@ -98,7 +98,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 100000
+    num_training = 1000
     num_val = 0
     num_test = 0
 
