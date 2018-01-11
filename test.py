@@ -11,7 +11,7 @@ import os
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler
-from network import Net
+from network2 import Net
 import torch.optim as optim
 from logger import Logger
 
@@ -37,7 +37,7 @@ class Rand_num(Dataset):
         self.img_paths = img_path
         image_labels = np.genfromtxt(csv_path, delimiter=',')
         image_labels.flatten()
-        self.num_classes = 13
+        self.num_classes = 16
         image_labels = np.reshape(image_labels, [-1, 14, 14, self.num_classes+5])
 
         self.transform = transform
@@ -58,7 +58,7 @@ class Rand_num(Dataset):
         return len(self.labels)
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp.bin'
+    SAVE_PATH = './checkpoint/cp_aug.bin'
 #    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 #    torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
@@ -68,8 +68,8 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = True
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'test.csv'
-    img_path = 'test'
+    csv_path = 'validation.csv'
+    img_path = 'validation'
     dataset = Rand_num(csv_path, img_path, 224, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)

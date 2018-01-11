@@ -25,7 +25,7 @@ def overlap(x,y,w,h, start_x, start_y, width, height):
 def crop_image(img):
     mean_x = np.mean(img, axis= 1)
     for i in range(len(mean_x)):
-        if mean_x[i] > 1:
+        if mean_x[i] > 0:
             start_point = i
             break
 
@@ -50,9 +50,9 @@ def random_placement(addrs, pic_w, pic_h, num_classes):
         for j in range(10):
             label = random.randint(0, num_classes-1)
             img=cv2.imread(random.choice(addrs[label][0]),cv2.IMREAD_GRAYSCALE)
-            reX, reY = random.uniform(0.8,1),random.uniform(0.8,1)
+            reX, reY = random.uniform(0.5,1),random.uniform(0.5,1)
             img=cv2.resize(img,None,fx=reX, fy=reY, interpolation = cv2.INTER_CUBIC)
-            img=crop_image(img)
+            #img=crop_image(img)
             h = np.shape(img)[0]
             w = np.shape(img)[1]
             if j == 0:
@@ -76,16 +76,24 @@ def random_placement(addrs, pic_w, pic_h, num_classes):
     img_ext[mask[0],mask[1]]=mask_val[mask[0],mask[1]]
     return img_ext, start_x, start_y, width, height, labels
 
+def img_augment(img):
+    max_val = 255
+    alpha = random.uniform(0.1, 1)
+    max_val = max_val*alpha
+    max_margin = int(255-max_val)
+    beta = random.randint(0, max_margin)
+    return img*alpha + beta
+
 if __name__ == '__main__':
 
-    dataset_name = 'validation'
+    dataset_name = 'validation28'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
 
     random.seed(datetime.now())
     temp_path = []
-    cell_num = 14
-    img_size = 224
+    cell_num = 28
+    img_size = 448
     cell_w = img_size/cell_num
 
     num_classes = 16
@@ -122,6 +130,7 @@ if __name__ == '__main__':
         img_resize = []
         size = []
         img, start_x, start_y, width, height, labels = random_placement(addrs, img_size, img_size, num_classes)
+        img = img_augment(img)
         img_savdir = './'+dataset_name+'/'+str(i)+'.jpg'
         cv2.imwrite(img_savdir,img)
         num_img = len(start_x)

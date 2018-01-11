@@ -11,7 +11,7 @@ import os
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler
-from network import Net
+from network2 import Net
 import torch.optim as optim
 from logger import Logger
 
@@ -37,7 +37,7 @@ class Rand_num(Dataset):
         self.img_paths = img_path
         image_labels = np.genfromtxt(csv_path, delimiter=',')
         image_labels.flatten()
-        self.num_classes = 13
+        self.num_classes = 16
         image_labels = np.reshape(image_labels, [-1, 14, 14, self.num_classes+5])
 
         self.transform = transform
@@ -58,19 +58,20 @@ class Rand_num(Dataset):
         return len(self.labels)
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp.bin'
+    SAVE_PATH = './checkpoint/cp_aug.bin'
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
     batch_size = 1
+    cell_size = 14
     load_checkpoint= True
     num_cells = 14
-    num_classes = 13
+    num_classes = 16
     img_size = 224
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'test.csv'
-    img_path = 'test'
+    csv_path = 'demo.csv'
+    img_path = 'demo'
     dataset = Rand_num(csv_path, img_path, 224, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)
@@ -104,7 +105,7 @@ if __name__ == '__main__':
 #
             threshold=0.2
             net.eval()
-            outputs = net.forward(inputs)
+            predicts = net.forward(inputs)
 #            loss, accu = net.loss_function_vec(outputs, labels, threshold, cal_accuracy=True)
 #
 #
@@ -122,14 +123,17 @@ if __name__ == '__main__':
 #    plt.show()
             gt_classes = labels[:, :, :, 5:]
             img = (inputs*256).data.cpu().int().numpy()[0,0]
-            predict_boxes = outputs[:, (num_cells*num_cells*num_classes+num_cells*num_cells*2):].contiguous().view(1, num_cells, num_cells, 2, 4)
-            predict_confidence = outputs[:, num_cells*num_cells*num_classes:(num_cells*num_cells*num_classes+num_cells*num_cells*2)].contiguous().view(1, num_cells, num_cells, 2)
-            predict_class = outputs[:,:num_cells*num_cells*num_classes].contiguous().view(1, num_cells, num_cells, num_classes)
+            predict_class = predicts[:,:,:,:num_classes] #batch_size, cell_size, cell_size, num of class (class score)
+            predict_confidence = predicts[:,:,:,num_classes:num_classes+2]#batch_size, cell_size, cell_size, num of boxes (box confidence)
+            predict_boxes = predicts[:,:,:,num_classes+2:num_classes+10].contiguous().view(batch_size, cell_size, cell_size, 2, 4) # batch_size, cell_size, cell_size, boxes_num, 4 (box coordinate)
+            #predict_boxes = outputs[:, (num_cells*num_cells*num_classes+num_cells*num_cells*2):].contiguous().view(1, num_cells, num_cells, 2, 4)
+            #predict_confidence = outputs[:, num_cells*num_cells*num_classes:(num_cells*num_cells*num_classes+num_cells*num_cells*2)].contiguous().view(1, num_cells, num_cells, 2)
+            #predict_class = outputs[:,:num_cells*num_cells*num_classes].contiguous().view(1, num_cells, num_cells, num_classes)
             max_confidence = torch.max(predict_confidence, 3, keepdim = True)
             threshold = 0.2
             detect_ob = torch.ge(max_confidence[0], threshold).float()
             font = cv2.FONT_HERSHEY_PLAIN
-            directory = os.path.dirname('../bounding_boxes_100/')
+            directory = os.path.dirname('../bounding_boxes/')
             if not os.path.exists(directory):
                 os.makedirs(directory)
 #####for test#######
@@ -165,7 +169,7 @@ if __name__ == '__main__':
         #                print(rb)
 
 
-            write_path = '../bounding_boxes_100/'+str(i)+'.jpg'
+            write_path = '../bounding_boxes/'+str(i)+'.jpg'
             cv2.imwrite(write_path,img)
     print('Finished Marking')
 

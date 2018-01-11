@@ -63,7 +63,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
     batch_size = 50
-    load_checkpoint= False
+    load_checkpoint= True
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     csv_path = 'data16.csv'
@@ -122,10 +122,10 @@ if __name__ == '__main__':
                 print ('Epoch %g'%(epoch))
                 print(loss.data.cpu().numpy())
 #                print(accu)
-                logger.scalar_summary('loss', loss.data.cpu().numpy(), epoch)
-                logger.scalar_summary('Accuracy detection TP', accu[0].data.cpu().numpy(), epoch)
-                logger.scalar_summary('Accuracy detection FP', accu[1].data.cpu().numpy(), epoch)
-                logger.scalar_summary('Accuracy IOU', accu[2].data.cpu().numpy(), epoch)
+                #logger.scalar_summary('loss', loss.data.cpu().numpy(), epoch)
+                #logger.scalar_summary('Accuracy detection TP', accu[0].data.cpu().numpy(), epoch)
+                #logger.scalar_summary('Accuracy detection FP', accu[1].data.cpu().numpy(), epoch)
+                #logger.scalar_summary('Accuracy IOU', accu[2].data.cpu().numpy(), epoch)
 #                logger.scalar_summary('Accuracy Class', accu[3].data.cpu().numpy(), epoch)
             if epoch % 1 == 0 and i==0:
                 torch.save(net.state_dict(), SAVE_PATH)
@@ -140,6 +140,7 @@ if __name__ == '__main__':
             loss, _ = net.loss_function_vec(outputs, labels, 0.2)
             total_loss.append(loss.data.cpu().numpy())
         mean_loss = np.mean(total_loss)
+        logger.scalar_summary('loss', mean_loss, epoch)
         print('val loss is %g'%(mean_loss))
         scheduler.step(mean_loss)
 

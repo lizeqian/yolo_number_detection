@@ -11,7 +11,7 @@ import os
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import RandomSampler
-from network import Net
+from network2 import Net
 import torch.optim as optim
 from logger import Logger
 import torch.optim.lr_scheduler as lr_scheduler
@@ -38,7 +38,8 @@ class Rand_num(Dataset):
         image_labels = np.genfromtxt(csv_path, delimiter=',')
         image_labels.flatten()
         self.num_classes = 16
-        image_labels = np.reshape(image_labels, [-1, 14, 14, self.num_classes+5])
+        self.num_cells = 28
+        image_labels = np.reshape(image_labels, [-1, 28, 28, self.num_classes+5])
 
         self.transform = transform
         self.labels=image_labels
@@ -58,24 +59,27 @@ class Rand_num(Dataset):
         return len(self.labels)
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp2.bin'
+    SAVE_PATH = './checkpoint/cp_28.bin'
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
-    logger = Logger('./logs2')
+    logger = Logger('./logs_28')
     batch_size = 10
     load_checkpoint= False
 
+    print (datetime.datetime.now())
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'data16.csv'
-    img_path = 'data16'
-    validation_label = 'validation.csv'
-    validation_data = 'validation'
-    dataset = Rand_num(csv_path, img_path, 224, None)
-    validationset = Rand_num(validation_label, validation_data, 224, None)
+    csv_path = 'data28.csv'
+    img_path = 'data28'
+    validation_label = 'validation28.csv'
+    validation_data = 'validation28'
+    dataset = Rand_num(csv_path, img_path, 448, None)
+    validationset = Rand_num(validation_label, validation_data, 448, None)
     sampler = RandomSampler(dataset)
     val_sampler = RandomSampler(validationset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=2)
     val_loader = DataLoader(validationset, batch_size = batch_size, sampler = val_sampler, shuffle = False, num_workers=2)
+    print (datetime.datetime.now())
+    print ('dataset comp')
 
 #    dataiter = iter(loader)
 #    images, labels = dataiter.next()
@@ -90,7 +94,7 @@ if __name__ == '__main__':
 
     net.cuda()
 
-    optimizer = optim.Adam(net.parameters(), lr=0.00001)
+    optimizer = optim.Adam(net.parameters(), lr=0.001)
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):
@@ -114,19 +118,19 @@ if __name__ == '__main__':
             optimizer.step()
             # print statistics
             #running_loss += loss.data[0]
-            #if epoch % 1 == 0 and i == 0:
-            #    net.eval()
-            #    outputs = net.forward(inputs)
-            #    loss, accu = net.loss_function_vec(outputs, labels, 0.5, cal_accuracy=True)
-            #    print (datetime.datetime.now())
-            #    print ('Epoch %g'%(epoch))
-            #    print(loss.data.cpu().numpy())
-#           #     print(accu)
-            #    logger.scalar_summary('loss', loss.data.cpu().numpy(), epoch)
-            #    logger.scalar_summary('Accuracy detection TP', accu[0].data.cpu().numpy(), epoch)
-            #    logger.scalar_summary('Accuracy detection FP', accu[1].data.cpu().numpy(), epoch)
-            #    logger.scalar_summary('Accuracy IOU', accu[2].data.cpu().numpy(), epoch)
-#           #     logger.scalar_summary('Accuracy Class', accu[3].data.cpu().numpy(), epoch)
+            if epoch % 1 == 0 and i == 0:
+                net.eval()
+                outputs = net.forward(inputs)
+                loss, accu = net.loss_function_vec(outputs, labels, 0.2, cal_accuracy=True)
+                print (datetime.datetime.now())
+                print ('Epoch %g'%(epoch))
+                print(loss.data.cpu().numpy())
+#                print(accu)
+                logger.scalar_summary('training loss', loss.data.cpu().numpy(), epoch)
+                #logger.scalar_summary('Accuracy detection TP', accu[0].data.cpu().numpy(), epoch)
+                #logger.scalar_summary('Accuracy detection FP', accu[1].data.cpu().numpy(), epoch)
+                #logger.scalar_summary('Accuracy IOU', accu[2].data.cpu().numpy(), epoch)
+#                logger.scalar_summary('Accuracy Class', accu[3].data.cpu().numpy(), epoch)
             if epoch % 1 == 0 and i==0:
                 torch.save(net.state_dict(), SAVE_PATH)
         total_loss=[]
@@ -134,13 +138,13 @@ if __name__ == '__main__':
             inputs, labels = data
             inputs, labels = inputs.float()/256, labels.float()
             inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile = True)
-            optimizer.zero_grad()
             net.eval()
             outputs = net.forward(inputs)
             loss, _ = net.loss_function_vec(outputs, labels, 0.2)
             total_loss.append(loss.data.cpu().numpy())
         mean_loss = np.mean(total_loss)
         print('val loss is %g'%(mean_loss))
+        logger.scalar_summary('validation loss', mean_loss, epoch)
         scheduler.step(mean_loss)
 
 

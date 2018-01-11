@@ -1,18 +1,10 @@
-import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image
 import torch
-from torchvision import models, transforms
 from torch.autograd import Variable
-import datetime
 import cv2
 import glob
-import os
 from torch.utils.data.dataset import Dataset
-from torch.utils.data import DataLoader
-from torch.utils.data.sampler import SequentialSampler
-from model.network import Net
-import torch.optim as optim
+from network2 import Net
 from logger import Logger
 
 
@@ -28,8 +20,8 @@ class Solver:
         self.batch_size = batch_size
         self.epoch_num = epoch_num
         self.net = net;
-        
-        
+
+
 
 class Rand_num(Dataset):
     def __init__(self, csv_path, img_path, img_size, transform=None):
@@ -66,15 +58,16 @@ class Rand_num(Dataset):
         return len(self.images)
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp100000.bin'
+    SAVE_PATH = './checkpoint/cp_aug.bin'
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
     batch_size = 1
     load_checkpoint= True
-    
 
-    img = cv2.imread("test1.png", 0)
+
+    img = cv2.imread("demo/1.PNG", 0)
+    img = cv2.resize(img, (224, 224), interpolation = cv2.INTER_CUBIC)
 
 #    dataiter = iter(loader)
 #    images, labels = dataiter.next()
@@ -82,23 +75,23 @@ if __name__ == '__main__':
 #    images=tensor_to_img(images)
 #    print (labels)
 #    print (images)
-    
+
     net = Net(batch_size)
     if load_checkpoint:
         net.load_state_dict(torch.load(SAVE_PATH))
-        
+
     net.cuda()
 
     inputs= torch.from_numpy(img).float()/256
-#        
+#
 #                # wrap them in Variable
-#                
+#
     inputs = Variable(inputs.cuda())
-#    
-    outputs = net.forward(inputs.view(1,1,112,112), False)
+#
+    outputs = net.forward(inputs.view(1,1,224,224))
 #            loss, accu = net.loss_function_vec(outputs, labels, threshold, cal_accuracy=True)
-#    
-#                
+#
+#
 #    #            print (datetime.datetime.now())
 #    #            print ('Epoch %g'%(epoch))
 #                print(loss.data.cpu().numpy())
@@ -106,7 +99,7 @@ if __name__ == '__main__':
 #                accu_tp.append(accu[0].data.cpu().numpy()[0])
 #                accu_fp.append(accu[1].data.cpu().numpy()[0])
 #                accu_iou.append(accu[2].data.cpu().numpy()[0])
-#                
+#
 #    plt.plot(thld, accu_tp, 'r')
 #    plt.plot(thld, accu_fp, 'b')
 #    plt.plot(thld, accu_iou, 'g')
@@ -119,7 +112,7 @@ if __name__ == '__main__':
     max_confidence = torch.max(predict_confidence, 3, keepdim = True)
     threshold = 0.2
     detect_ob = torch.ge(max_confidence[0], threshold).float()
-    font = cv2.FONT_HERSHEY_PLAIN 
+    font = cv2.FONT_HERSHEY_PLAIN
 #####for test#######
 #            for y in range(7):
 #                for x in range(7):
@@ -152,8 +145,8 @@ if __name__ == '__main__':
     cv2.imwrite(write_path,img)
 
 
-    
 
 
-    
+
+
 
