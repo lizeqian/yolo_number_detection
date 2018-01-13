@@ -30,33 +30,39 @@ class Solver:
         self.net = net;
 
 
-
 class Rand_num(Dataset):
     def __init__(self, csv_path, img_path, img_size, transform=None):
-        csv_path = csv_path
+        self.csv_path = csv_path
         self.img_paths = img_path
-        image_labels = np.genfromtxt(csv_path, delimiter=',')
-        image_labels.flatten()
+        self.file_count = sum(len(files) for _, _, files in os.walk(img_path))
+        print (self.file_count)
         self.num_classes = 16
         self.num_cells = 28
-        image_labels = np.reshape(image_labels, [-1, self.num_cells, self.num_cells, self.num_classes+5])
 
         self.transform = transform
-        self.labels=image_labels
+        #self.labels=image_labels
 
     def __getitem__(self, index):
         image_addr = self.img_paths+'/'+str(index)+'.jpg'
         img = np.expand_dims(cv2.imread(image_addr,0), 0)
-        label = self.labels[index]
+        #label = self.labels[index]
+
+        start_line = index*self.num_cells*self.num_cells
+        end_line = (self.file_count - index -1)*self.num_cells*self.num_cells
+        image_labels = np.genfromtxt(self.csv_path, delimiter=',', skip_header=start_line, skip_footer=end_line)
+        image_labels.flatten()
+        image_labels = np.reshape(image_labels, [28, 28, self.num_classes+5])
+
 
         if self.transform is not None:
             img = self.transform(img)
 
-        return img, label
+        return img, image_labels
 
     def __len__(self):
 #        print ('\tcalling Dataset:__len__')
-        return len(self.labels)
+        return self.file_count
+
 
 if __name__ == '__main__':
     SAVE_PATH = './checkpoint/cp_28.bin'

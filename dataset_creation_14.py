@@ -86,9 +86,12 @@ def img_augment(img):
 
 if __name__ == '__main__':
 
-    dataset_name = 'validation28'
+    dataset_name = 'data28'
+    dataset_label = dataset_name+'_label'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
+    if not os.path.exists(dataset_label):
+        os.makedirs(dataset_label)
 
     random.seed(datetime.now())
     temp_path = []
@@ -106,7 +109,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 1000
+    num_training = 100000
     num_val = 0
     num_test = 0
 
@@ -118,7 +121,6 @@ if __name__ == '__main__':
         addrs[i].append(glob.glob(temp_path[i]))
 
 
-    csvarray = np.zeros((cell_num*cell_num*num_training, num_classes+5))
 
     for i in range(num_training):
         if i%100 == 0:
@@ -135,6 +137,8 @@ if __name__ == '__main__':
         cv2.imwrite(img_savdir,img)
         num_img = len(start_x)
 
+        csvarray = np.zeros((cell_num*cell_num, num_classes+5))
+
         for j in range(num_img):
             x = start_x[j]+width[j]/2.0
             y = start_y[j]+height[j]/2.0
@@ -150,7 +154,7 @@ if __name__ == '__main__':
 
             label_onehot = np.zeros(num_classes)
             label_onehot[label] = 1
-            csvarray[i*cell_num*cell_num+y_int*cell_num+x_int, :4] = [x_frac, y_frac, w_frac, h_frac]
-            csvarray[i*cell_num*cell_num+y_int*cell_num+x_int, 4] = 1
-            csvarray[i*cell_num*cell_num+y_int*cell_num+x_int, 5:] = label_onehot
-    np.savetxt(dataset_name+".csv", csvarray, fmt='%g', delimiter=',')
+            csvarray[y_int*cell_num+x_int, :4] = [x_frac, y_frac, w_frac, h_frac]
+            csvarray[y_int*cell_num+x_int, 4] = 1
+            csvarray[y_int*cell_num+x_int, 5:] = label_onehot
+        np.savetxt(dataset_label+'/'+str(i)+".csv", csvarray, fmt='%g', delimiter=',')
