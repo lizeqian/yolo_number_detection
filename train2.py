@@ -50,7 +50,7 @@ class Rand_num(Dataset):
 
         image_labels = np.genfromtxt(label_addr, delimiter=',')
         image_labels.flatten()
-        image_labels = np.reshape(image_labels, [28, 28, self.num_classes+5])
+        image_labels = np.reshape(image_labels, [self.num_cells, self.num_cells, self.num_classes+5])
 
 
         if self.transform is not None:
