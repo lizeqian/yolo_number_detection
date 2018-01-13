@@ -38,7 +38,8 @@ class Rand_num(Dataset):
         image_labels = np.genfromtxt(csv_path, delimiter=',')
         image_labels.flatten()
         self.num_classes = 16
-        image_labels = np.reshape(image_labels, [-1, 14, 14, self.num_classes+5])
+        self.num_cells = 28
+        image_labels = np.reshape(image_labels, [-1, self.num_cells, self.num_cells, self.num_classes+5])
 
         self.transform = transform
         self.labels=image_labels
@@ -58,7 +59,7 @@ class Rand_num(Dataset):
         return len(self.labels)
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp_aug.bin'
+    SAVE_PATH = './checkpoint/cp_28.bin'
 #    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 #    torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
@@ -68,9 +69,9 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = True
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'validation.csv'
-    img_path = 'validation'
-    dataset = Rand_num(csv_path, img_path, 224, None)
+    csv_path = 'validation28.csv'
+    img_path = 'validation28'
+    dataset = Rand_num(csv_path, img_path, 448, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)
     print("data loaded")
