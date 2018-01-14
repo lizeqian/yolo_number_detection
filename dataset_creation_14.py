@@ -99,7 +99,7 @@ if __name__ == '__main__':
     img_size = 448
     cell_w = img_size/cell_num
 
-    num_classes = 16
+    num_classes = 21
 
     for i in range(num_classes):
 #        import os

@@ -36,7 +36,7 @@ class Rand_num(Dataset):
         self.csv_paths = csv_path
         self.img_paths = img_path
         self.file_count = sum(len(files) for _, _, files in os.walk(img_path))
-        self.num_classes = 16
+        self.num_classes = 21
         self.num_cells = 28
 
         self.transform = transform
@@ -63,7 +63,7 @@ class Rand_num(Dataset):
         return self.file_count
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp_28.bin'
+    SAVE_PATH = './checkpoint/cp_28.pth'
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs_28')
@@ -95,9 +95,9 @@ if __name__ == '__main__':
     net = Net(batch_size)
     if load_checkpoint:
         net.load_state_dict(torch.load(SAVE_PATH))
+    print('network loaded')
 
     net.cuda()
-
     optimizer = optim.Adam(net.parameters(), lr=0.001)
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
     for epoch in range(2000):
@@ -123,18 +123,13 @@ if __name__ == '__main__':
             # print statistics
             #running_loss += loss.data[0]
             if epoch % 1 == 0 and i == 0:
-                net.eval()
-                outputs = net.forward(inputs)
-                loss, accu = net.loss_function_vec(outputs, labels, 0.2, cal_accuracy=True)
+            #    net.eval()
+            #    outputs = net.forward(inputs)
+            #    loss, accu = net.loss_function_vec(outputs, labels, 0.2, cal_accuracy=True)
                 print (datetime.datetime.now())
                 print ('Epoch %g'%(epoch))
                 print(loss.data.cpu().numpy())
-#                print(accu)
                 logger.scalar_summary('training loss', loss.data.cpu().numpy(), epoch)
-                #logger.scalar_summary('Accuracy detection TP', accu[0].data.cpu().numpy(), epoch)
-                #logger.scalar_summary('Accuracy detection FP', accu[1].data.cpu().numpy(), epoch)
-                #logger.scalar_summary('Accuracy IOU', accu[2].data.cpu().numpy(), epoch)
-#                logger.scalar_summary('Accuracy Class', accu[3].data.cpu().numpy(), epoch)
             if epoch % 1 == 0 and i==0:
                 torch.save(net.state_dict(), SAVE_PATH)
         total_loss=[]

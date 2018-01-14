@@ -8,20 +8,17 @@ import math
 class Net(nn.Module):
     def __init__(self, batch_size):
         super(Net, self).__init__()
-        self.num_classes = 16
+        self.num_classes = 21
         self.cell_size = 28
         self.img_size=448
         self.batch_size = batch_size
+        self.output_bits = self.num_classes+10
         self.conv1 = nn.Conv2d(1, 32, 7, padding=3)  #j=1, r=7
         self.conv2 = nn.Conv2d(32, 64, 3, padding=1) #j=j*s=2, r=r+(k-1)*j=11
         self.conv3 = nn.Conv2d(64, 128, 3, padding=1) #j=2, r=15
         self.conv4 = nn.Conv2d(128, 256, 3, padding=1) #j=4, r=23
-        self.conv5 = nn.Conv2d(256, 512, 7, padding=3) #j=8, r=23+8*6=71
-        self.conv6 = nn.Conv2d(512, 26, 7, padding=3) #j=16, r=71+16*6=167
-        self.conv7 = nn.Conv2d(1024, 26, 7, padding=3) #j=16, r=167+16*6=263
+        self.conv5 = nn.Conv2d(256, self.output_bits, 5, padding=2) #j=16, r=71+16*6=167
         self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(self.cell_size* self.cell_size * 256, 4096*2)
-        self.fc2 = nn.Linear(4096*2, self.cell_size*self.cell_size*(self.num_classes+10))
         self.offset = torch.arange(0,self.cell_size).expand(self.cell_size*2,self.cell_size).contiguous().view(2, self.cell_size, self.cell_size).permute(1, 2, 0).contiguous().view(1,self.cell_size,self.cell_size,2).expand(self.batch_size,self.cell_size,self.cell_size,2)
         self.offset = Variable(self.offset)
         self.lambda_coord = 5
@@ -31,23 +28,15 @@ class Net(nn.Module):
         self.batchnorm2=nn.BatchNorm2d(64)
         self.batchnorm3=nn.BatchNorm2d(128)
         self.batchnorm4=nn.BatchNorm2d(256)
-        self.batchnorm5=nn.BatchNorm2d(512)
-        self.batchnorm6=nn.BatchNorm2d(26)
-        self.batchnorm7=nn.BatchNorm2d(26)
+        self.batchnorm5=nn.BatchNorm2d(self.output_bits)
 
 
     def forward(self, x):
         x = self.pool(F.leaky_relu(self.batchnorm1(self.conv1(x))))
-        x = F.leaky_relu(self.batchnorm2(self.conv2(x)))
+        x = self.pool(F.leaky_relu(self.batchnorm2(self.conv2(x))))
         x = self.pool(F.leaky_relu(self.batchnorm3(self.conv3(x))))
         x = self.pool(F.leaky_relu(self.batchnorm4(self.conv4(x))))
-        x = self.pool(F.leaky_relu(self.batchnorm5(self.conv5(x))))
-        x = self.batchnorm6(self.conv6(x))
-        #x = self.batchnorm7(self.conv7(x))
-        #x = x.contiguous().view(-1, self.cell_size* self.cell_size * 26)
-        #x = F.leaky_relu(self.fc1(x))
-        #x = F.dropout(x)
-        #x = self.fc2(x)
+        x = self.batchnorm5(self.conv5(x))
         x = torch.sigmoid(x)
         x = x.permute(0,2,3,1)
         return x
@@ -111,7 +100,6 @@ class Net(nn.Module):
 
     def loss_function_vec(self, predicts, labels, threshold, cal_accuracy=False): #labels: [batch_size, cell_size_x, cell_size_y, 2+5] (x, y, w, h, C, p(c0), p(c1))
 
-        #print(predicts)
         predict_class = predicts[:,:,:,:self.num_classes] #batch_size, cell_size, cell_size, num of class (class score)
         predict_confidence = predicts[:,:,:,self.num_classes:self.num_classes+2]#batch_size, cell_size, cell_size, num of boxes (box confidence)
         predict_boxes = predicts[:,:,:,self.num_classes+2:self.num_classes+10].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 2, 4) # batch_size, cell_size, cell_size, boxes_num, 4 (box coordinate)
