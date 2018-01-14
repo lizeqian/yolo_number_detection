@@ -67,7 +67,7 @@ if __name__ == '__main__':
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs_28')
-    batch_size = 10
+    batch_size = 50
     load_checkpoint= False
 
     print (datetime.datetime.now())
@@ -102,6 +102,7 @@ if __name__ == '__main__':
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):
+            print(i)
             # get the inputs
             inputs, labels = data
             inputs, labels = inputs.float()/256, labels.float()
