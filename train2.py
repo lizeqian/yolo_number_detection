@@ -63,7 +63,7 @@ class Rand_num(Dataset):
         return self.file_count
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp_28.pth'
+    SAVE_PATH = './checkpoint/cp_28_1.pth'
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs_28')
@@ -102,7 +102,6 @@ if __name__ == '__main__':
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):
-            print(i)
             # get the inputs
             inputs, labels = data
             inputs, labels = inputs.float()/256, labels.float()
@@ -143,6 +142,7 @@ if __name__ == '__main__':
             loss, _ = net.loss_function_vec(outputs, labels, 0.2)
             total_loss.append(loss.data.cpu().numpy())
         mean_loss = np.mean(total_loss)
+        print (datetime.datetime.now())
         print('val loss is %g'%(mean_loss))
         logger.scalar_summary('validation loss', mean_loss, epoch)
         scheduler.step(mean_loss)

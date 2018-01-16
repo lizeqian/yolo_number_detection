@@ -29,37 +29,40 @@ class Solver:
         self.epoch_num = epoch_num
         self.net = net;
 
-
-
 class Rand_num(Dataset):
     def __init__(self, csv_path, img_path, img_size, transform=None):
-        csv_path = csv_path
+        self.csv_paths = csv_path
         self.img_paths = img_path
-        image_labels = np.genfromtxt(csv_path, delimiter=',')
-        image_labels.flatten()
-        self.num_classes = 16
+        self.file_count = sum(len(files) for _, _, files in os.walk(img_path))
+        self.num_classes = 21
         self.num_cells = 28
-        image_labels = np.reshape(image_labels, [-1, self.num_cells, self.num_cells, self.num_classes+5])
 
         self.transform = transform
-        self.labels=image_labels
+        #self.labels=image_labels
 
     def __getitem__(self, index):
         image_addr = self.img_paths+'/'+str(index)+'.jpg'
+        label_addr = self.csv_paths+'/'+str(index)+'.csv'
         img = np.expand_dims(cv2.imread(image_addr,0), 0)
-        label = self.labels[index]
+        #label = self.labels[index]
+
+        image_labels = np.genfromtxt(label_addr, delimiter=',')
+        image_labels.flatten()
+        image_labels = np.reshape(image_labels, [self.num_cells, self.num_cells, self.num_classes+5])
+
 
         if self.transform is not None:
             img = self.transform(img)
 
-        return img, label
+        return img, image_labels
 
     def __len__(self):
 #        print ('\tcalling Dataset:__len__')
-        return len(self.labels)
+        return self.file_count
+
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp_28.bin'
+    SAVE_PATH = './checkpoint/cp_28.pth'
 #    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 #    torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
@@ -69,7 +72,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = True
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'validation28.csv'
+    csv_path = 'validation28_label'
     img_path = 'validation28'
     dataset = Rand_num(csv_path, img_path, 448, None)
     sampler = SequentialSampler(dataset)

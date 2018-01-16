@@ -86,7 +86,7 @@ def img_augment(img):
 
 if __name__ == '__main__':
 
-    dataset_name = 'data28'
+    dataset_name = 'validation28'
     dataset_label = dataset_name+'_label'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
@@ -109,7 +109,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 100000
+    num_training = 1000
     num_val = 0
     num_test = 0
 
