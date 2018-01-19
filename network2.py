@@ -17,8 +17,7 @@ class Net(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, 3, padding=1) #j=j*s=2, r=r+(k-1)*j=11
         self.conv3 = nn.Conv2d(64, 128, 3, padding=1) #j=2, r=15
         self.conv4 = nn.Conv2d(128, 256, 3, padding=1) #j=4, r=23
-        self.conv5 = nn.Conv2d(256, 512, 5, padding=2) #j=16, r=71+16*6=167
-        self.conv6 = nn.Conv2d(512, self.output_bits, 5, padding=2) #j=16, r=71+16*6=167
+        self.conv5 = nn.Conv2d(256, self.output_bits, 5, padding=2) #j=16, r=71+16*6=167
         self.pool = nn.MaxPool2d(2, 2)
         self.offset = torch.arange(0,self.cell_size).expand(self.cell_size*2,self.cell_size).contiguous().view(2, self.cell_size, self.cell_size).permute(1, 2, 0).contiguous().view(1,self.cell_size,self.cell_size,2).expand(self.batch_size,self.cell_size,self.cell_size,2)
         self.offset = Variable(self.offset)
@@ -29,8 +28,7 @@ class Net(nn.Module):
         self.batchnorm2=nn.BatchNorm2d(64)
         self.batchnorm3=nn.BatchNorm2d(128)
         self.batchnorm4=nn.BatchNorm2d(256)
-        self.batchnorm5=nn.BatchNorm2d(512)
-        self.batchnorm6=nn.BatchNorm2d(self.output_bits)
+        self.batchnorm5=nn.BatchNorm2d(self.output_bits)
 
 
     def forward(self, x):
@@ -38,8 +36,7 @@ class Net(nn.Module):
         x = self.pool(F.leaky_relu(self.batchnorm2(self.conv2(x))))
         x = self.pool(F.leaky_relu(self.batchnorm3(self.conv3(x))))
         x = self.pool(F.leaky_relu(self.batchnorm4(self.conv4(x))))
-        x = F.leaky_relu(self.batchnorm5(self.conv5(x)))
-        x = self.batchnorm6(self.conv6(x))
+        x = self.batchnorm5(self.conv5(x))
         x = torch.sigmoid(x)
         x = x.permute(0,2,3,1)
         return x

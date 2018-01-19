@@ -63,7 +63,7 @@ class Rand_num(Dataset):
         return self.file_count
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp_28_1.pth'
+    SAVE_PATH = './checkpoint/cp_28.pth'
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs_28')
@@ -72,10 +72,10 @@ if __name__ == '__main__':
 
     print (datetime.datetime.now())
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'data28_label'
-    img_path = 'data28'
-    validation_label = 'validation28_label'
-    validation_data = 'validation28'
+    csv_path = 'data_dis_label'
+    img_path = 'data_dis'
+    validation_label = 'validation_dis_label'
+    validation_data = 'validation_dis'
     dataset = Rand_num(csv_path, img_path, 448, None)
     validationset = Rand_num(validation_label, validation_data, 448, None)
     sampler = RandomSampler(dataset)

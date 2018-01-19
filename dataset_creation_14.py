@@ -46,12 +46,12 @@ def random_placement(addrs, pic_w, pic_h, num_classes):
     labels=[]
 #    reX, reY = random.uniform(0.5,1.5),random.uniform(0.5,1.5)
     for i in range(10):
-        y = random.randint(0, pic_h - 28*2 - 1)
+        y = random.randint(0, pic_h - 78)
         for j in range(10):
             label = random.randint(0, num_classes-1)
             img=cv2.imread(random.choice(addrs[label][0]),cv2.IMREAD_GRAYSCALE)
-            reX, reY = random.uniform(0.5,1),random.uniform(0.5,1)
-            img=cv2.resize(img,None,fx=reX, fy=reY, interpolation = cv2.INTER_CUBIC)
+            reX, reY = random.uniform(0,1.5),random.uniform(0,1.5)
+            img=cv2.resize(img,None,fx=reX**2+0.5, fy=reY**2+0.5, interpolation = cv2.INTER_CUBIC)
             #img=crop_image(img)
             h = np.shape(img)[0]
             w = np.shape(img)[1]
@@ -84,9 +84,23 @@ def img_augment(img):
     beta = random.randint(0, max_margin)
     return img*alpha + beta
 
+def addlines(img):
+    w, h = np.shape(img)[0], np.shape(img)[1]
+    num_lines = random.randint(0, 10)
+    for i in range(num_lines):
+        thickness = random.randint(1,2)
+        color = random.randint(0, 255)
+        p0_x = random.randint(0, w)
+        p0_y = random.randint(0, h)
+        p1_x = random.randint(0, w)
+        p1_y = random.randint(0, h)
+        cv2.line(img, (p0_x, p0_y), (p1_x, p1_y), color, thickness)
+    return img
+
+
 if __name__ == '__main__':
 
-    dataset_name = 'validation28'
+    dataset_name = 'data_dis'
     dataset_label = dataset_name+'_label'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
@@ -109,7 +123,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 1000
+    num_training = 100000
     num_val = 0
     num_test = 0
 
@@ -133,6 +147,7 @@ if __name__ == '__main__':
         size = []
         img, start_x, start_y, width, height, labels = random_placement(addrs, img_size, img_size, num_classes)
         img = img_augment(img)
+        img = addlines(img)
         img_savdir = './'+dataset_name+'/'+str(i)+'.jpg'
         cv2.imwrite(img_savdir,img)
         num_img = len(start_x)
