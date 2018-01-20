@@ -37,44 +37,47 @@ def crop_image(img):
     img = np.array(img)[:, start_point:end_point]
     return img
 
+def equation_gen(addrs, num_classes, pic_w):
+    num_sym = random.randint(1, 10)
+    max_w = np.minimum(300//num_sym, 100)
+    reX = random.randint(16, max_w)
+    reY = random.randint(16, 100)
+    img = np.zeros((reY, reX*num_sym))
+    for i in range(num_sym):
+        label = random.randint(0, num_classes-1)
+        img_seg = cv2.imread(random.choice(addrs[label][0]),cv2.IMREAD_GRAYSCALE)
+        img_seg=cv2.resize(img_seg,(reX, reY), interpolation = cv2.INTER_CUBIC)
+        img[:,i*reX:i*reX+reX]=img_seg
+    return img
+        
+
 def random_placement(addrs, pic_w, pic_h, num_classes):
     img_ext = np.zeros((pic_h,pic_w), dtype=np.uint8)
     start_x=[]
     start_y=[]
     width = []
     height = []
-    labels=[]
 #    reX, reY = random.uniform(0.5,1.5),random.uniform(0.5,1.5)
     for i in range(10):
-        y = random.randint(0, pic_h - 78)
-        for j in range(10):
-            label = random.randint(0, num_classes-1)
-            img=cv2.imread(random.choice(addrs[label][0]),cv2.IMREAD_GRAYSCALE)
-            reX, reY = random.uniform(0,1.5),random.uniform(0,1.5)
-            img=cv2.resize(img,None,fx=reX**2+0.5, fy=reY**2+0.5, interpolation = cv2.INTER_CUBIC)
-            #img=crop_image(img)
-            h = np.shape(img)[0]
-            w = np.shape(img)[1]
-            if j == 0:
-                x = random.randint(0, pic_w - w - 1)
-            if overlap(x,y,w,h, start_x, start_y, width, height):
-                break
-            else:
-                if x + w < pic_w:
-                    labels.append(label)
-                    height.append(h)
-                    width.append(w)
-                    start_x.append(x)
-                    start_y.append(y)
-                    img_ext[y:y+h,x:x+w] = img
+        img=equation_gen(addrs, num_classes, pic_w)
+        h = np.shape(img)[0]
+        w = np.shape(img)[1]
+        y = random.randint(0, pic_h - h)
+        x = random.randint(0, pic_w - w)
+        
+        if overlap(x,y,w,h, start_x, start_y, width, height):
+            continue
+        else:
+            height.append(h)
+            width.append(w)
+            start_x.append(x)
+            start_y.append(y)
+            img_ext[y:y+h,x:x+w] = img
 
-                    x+=w
-                else:
-                    break
     mask = np.where(img_ext==0)
     mask_val = np.random.randint(low=0, high=20, size=(pic_h, pic_w), dtype = np.uint8)
     img_ext[mask[0],mask[1]]=mask_val[mask[0],mask[1]]
-    return img_ext, start_x, start_y, width, height, labels
+    return img_ext, start_x, start_y, width, height
 
 def img_augment(img):
     max_val = 255
@@ -100,7 +103,7 @@ def addlines(img):
 
 if __name__ == '__main__':
 
-    dataset_name = 'data_dis'
+    dataset_name = 'data_eq'
     dataset_label = dataset_name+'_label'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
@@ -123,7 +126,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 100000
+    num_training = 1000
     num_val = 0
     num_test = 0
 
@@ -145,21 +148,20 @@ if __name__ == '__main__':
         resize = []
         img_resize = []
         size = []
-        img, start_x, start_y, width, height, labels = random_placement(addrs, img_size, img_size, num_classes)
+        img, start_x, start_y, width, height = random_placement(addrs, img_size, img_size, num_classes)
         img = img_augment(img)
         img = addlines(img)
         img_savdir = './'+dataset_name+'/'+str(i)+'.jpg'
         cv2.imwrite(img_savdir,img)
         num_img = len(start_x)
 
-        csvarray = np.zeros((cell_num*cell_num, num_classes+5))
+        csvarray = np.zeros((cell_num*cell_num, 5))
 
         for j in range(num_img):
             x = start_x[j]+width[j]/2.0
             y = start_y[j]+height[j]/2.0
             w = width[j]
             h = height[j]
-            label = labels[j]
             x_int = int(x//cell_w)
             y_int = int(y//cell_w)
             x_frac = (x%cell_w)/cell_w
@@ -167,9 +169,7 @@ if __name__ == '__main__':
             w_frac = w/img_size
             h_frac = h/img_size
 
-            label_onehot = np.zeros(num_classes)
-            label_onehot[label] = 1
+     
             csvarray[y_int*cell_num+x_int, :4] = [x_frac, y_frac, w_frac, h_frac]
             csvarray[y_int*cell_num+x_int, 4] = 1
-            csvarray[y_int*cell_num+x_int, 5:] = label_onehot
         np.savetxt(dataset_label+'/'+str(i)+".csv", csvarray, fmt='%g', delimiter=',')
