@@ -11,7 +11,7 @@ import os
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler
-from network2 import Net
+from network3 import Net
 import torch.optim as optim
 from logger import Logger
 
@@ -34,7 +34,7 @@ class Rand_num(Dataset):
         self.csv_paths = csv_path
         self.img_paths = img_path
         self.file_count = sum(len(files) for _, _, files in os.walk(img_path))
-        self.num_classes = 39
+        self.num_classes = 0
         self.num_cells = 28
 
         self.transform = transform
@@ -61,7 +61,7 @@ class Rand_num(Dataset):
         return self.file_count
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp_all.pth'
+    SAVE_PATH = './checkpoint/cp_3.pth'
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
@@ -69,12 +69,12 @@ if __name__ == '__main__':
     cell_size = 28
     load_checkpoint= True
     num_cells = 28
-    num_classes = 39
+    num_classes = 0
     img_size = 448
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'validation_dis_label'
-    img_path = 'video_frames'
+    csv_path = 'validation_eq_label'
+    img_path = 'validation_eq'
     dataset = Rand_num(csv_path, img_path, img_size, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 #
             inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
 #
-            threshold=0.4
+            threshold=0.2
             net.eval()
             predicts = net.forward(inputs)
 #            loss, accu = net.loss_function_vec(outputs, labels, threshold, cal_accuracy=True)
@@ -124,9 +124,9 @@ if __name__ == '__main__':
 #    plt.plot(thld, accu_fp, 'b')
 #    plt.plot(thld, accu_iou, 'g')
 #    plt.show()
-            gt_classes = labels[:, :, :, 5:]
+            #gt_classes = labels[:, :, :, 5:]
             img = (inputs*256).data.cpu().int().numpy()[0,0]
-            predict_class = predicts[:,:,:,:num_classes] #batch_size, cell_size, cell_size, num of class (class score)
+            #predict_class = predicts[:,:,:,:num_classes] #batch_size, cell_size, cell_size, num of class (class score)
             predict_confidence = predicts[:,:,:,num_classes:num_classes+2]#batch_size, cell_size, cell_size, num of boxes (box confidence)
             predict_boxes = predicts[:,:,:,num_classes+2:num_classes+10].contiguous().view(batch_size, cell_size, cell_size, 2, 4) # batch_size, cell_size, cell_size, boxes_num, 4 (box coordinate)
             #predict_boxes = outputs[:, (num_cells*num_cells*num_classes+num_cells*num_cells*2):].contiguous().view(1, num_cells, num_cells, 2, 4)
@@ -151,30 +151,42 @@ if __name__ == '__main__':
                 for x in range(num_cells):
                     if detect_ob.data.cpu().numpy()[0, y, x, 0] == 1:
                         selection = max_confidence[1].data.cpu().numpy()[0,y,x,0]
-                        class_ = np.argmax(predict_class.data.cpu().numpy()[0,y,x])
-                        gt_class = np.argmax(gt_classes.data.cpu().numpy()[0,y,x])
+                        #class_ = np.argmax(predict_class.data.cpu().numpy()[0,y,x])
+                        #gt_class = np.argmax(gt_classes.data.cpu().numpy()[0,y,x])
                         xp, yp, w, h = predict_boxes.data.cpu().numpy()[0,y,x,selection]
         #                print((xp, yp, w, h))
         #                print((x,y))
                         lu = (int((x+xp)*16-w*img_size/2), int((y+yp)*16-h*img_size/2))
                         rb = (int((x+xp)*16+w*img_size/2), int((y+yp)*16+h*img_size/2))
-                        color = 255#int(255 - img[lu[1], lu[0]])
+                        color = 255 #int(255 - img[lu[1], lu[0]])
 
                         #if class_ == gt_class:
                         #    color = 255
                         #else :
                         #    color = 100
-                        if class_ < 10:
-                            cls_str = str(class_)
-                        elif class_ < 36:
-                            cls_str = chr(class_ + 87)
-                        elif class_ == 36:
-                            cls_str = "+"
-                        elif class_ == 37:
-                            cls_str = "-"
-                        elif class_ == 38:
-                            cls_str = "="
-                        cv2.putText(img,cls_str,(lu[0],lu[1]), font, 1,(color,color,color), 1,cv2.LINE_AA, False)
+                        #if class_ < 10:
+                        #    cls_str = str(class_)
+                        #elif class_ == 11:
+                        #    cls_str = "x"
+                        #elif class_ == 12:
+                        #    cls_str = "y"
+                        #elif class_ == 13:
+                        #    cls_str = "z"
+                        #elif class_ == 14:
+                        #    cls_str = "a"
+                        #elif class_ == 15:
+                        #    cls_str = "b"
+                        #elif class_ == 16:
+                        #    cls_str = "m"
+                        #elif class_ == 17:
+                        #    cls_str = "n"
+                        #elif class_ == 18:
+                        #    cls_str = "+"
+                        #elif class_ == 19:
+                        #    cls_str = "-"
+                        #elif class_ == 20:
+                        #    cls_str = "="
+                        #cv2.putText(img,cls_str,(lu[0],lu[1]), font, 1,(color,color,color), 1,cv2.LINE_AA, False)
                         #    cv2.putText(img,str(gt_class),(rb[0],rb[1]), font, 1,(255,255,255), 1,cv2.LINE_AA, False)
                         #    print(gt_class)
                         cv2.rectangle(img, lu, rb, color)

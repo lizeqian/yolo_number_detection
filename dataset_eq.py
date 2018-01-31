@@ -49,7 +49,7 @@ def equation_gen(addrs, num_classes, pic_w):
         img_seg=cv2.resize(img_seg,(reX, reY), interpolation = cv2.INTER_CUBIC)
         img[:,i*reX:i*reX+reX]=img_seg
     return img
-        
+
 
 def random_placement(addrs, pic_w, pic_h, num_classes):
     img_ext = np.zeros((pic_h,pic_w), dtype=np.uint8)
@@ -64,7 +64,7 @@ def random_placement(addrs, pic_w, pic_h, num_classes):
         w = np.shape(img)[1]
         y = random.randint(0, pic_h - h)
         x = random.randint(0, pic_w - w)
-        
+
         if overlap(x,y,w,h, start_x, start_y, width, height):
             continue
         else:
@@ -112,11 +112,11 @@ if __name__ == '__main__':
 
     random.seed(datetime.now())
     temp_path = []
-    cell_num = 28
+    cell_num = 7
     img_size = 448
     cell_w = img_size/cell_num
 
-    num_classes = 21
+    num_classes = 39
 
     for i in range(num_classes):
 #        import os
@@ -126,7 +126,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 1000
+    num_training = 100000
     num_val = 0
     num_test = 0
 
@@ -169,7 +169,7 @@ if __name__ == '__main__':
             w_frac = w/img_size
             h_frac = h/img_size
 
-     
+
             csvarray[y_int*cell_num+x_int, :4] = [x_frac, y_frac, w_frac, h_frac]
             csvarray[y_int*cell_num+x_int, 4] = 1
         np.savetxt(dataset_label+'/'+str(i)+".csv", csvarray, fmt='%g', delimiter=',')

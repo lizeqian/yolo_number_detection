@@ -62,11 +62,11 @@ class Rand_num(Dataset):
 
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp_28.pth'
+    SAVE_PATH = './checkpoint/cp_2.pth'
 #    torch.set_default_tensor_type('torch.cuda.FloatTensor')
 #    torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
-    batch_size = 50
+    batch_size = 1
     load_checkpoint= True
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
@@ -92,13 +92,22 @@ if __name__ == '__main__':
 #    net.cuda()
 
     thld = np.arange(0,1,0.05)
-    accu_tp=[]
-    accu_fp=[]
-    accu_iou=[]
-    accu_cls=[]
 
+    ave_tp  = []
+    ave_fp  = []
+    ave_gt  = []
+    ave_pt  = []
+    ave_iou = []
+    ave_cls = []
     threshold = 0.2
     for threshold in thld:
+        print("thld is %g"%(threshold))
+        accu_tp=[]
+        accu_fp=[]
+        accu_gt=[]
+        accu_pt=[]
+        accu_iou=[]
+        accu_cls=[]
         for i, data in enumerate(loader, 0):
             # get the inputs
             inputs, labels = data
@@ -117,18 +126,30 @@ if __name__ == '__main__':
 #                print (datetime.datetime.now())
 #                print ('Epoch %g'%(epoch))
             #print(loss.data.cpu().numpy())
-            print("thld is %g"%(threshold))
-            print(accu)
-            accu_tp.append(accu[0].data.cpu().numpy()[0])
-            accu_fp.append(accu[1].data.cpu().numpy()[0])
-            accu_iou.append(accu[2].data.cpu().numpy()[0])
-            accu_cls.append(accu[3].data.cpu().numpy()[0])
+            #print("thld is %g"%(threshold))
+            #print(accu)
+            #print("%gth img pt is %g"%(i, accu[0][3].data.cpu().numpy()[0]))
+            accu_tp.append(accu[0][0].data.cpu().numpy()[0])
+            accu_fp.append(accu[0][1].data.cpu().numpy()[0])
+            accu_gt.append(accu[0][2].data.cpu().numpy()[0])
+            accu_pt.append(accu[0][3].data.cpu().numpy()[0])
+            accu_iou.append(accu[1].data.cpu().numpy()[0])
+            accu_cls.append(accu[2].data.cpu().numpy()[0])
+        ave_tp.append(np.mean(accu_tp))
+        ave_fp.append(np.mean(accu_fp))
+        ave_gt.append(np.mean(accu_gt))
+        ave_pt.append(np.mean(accu_pt))
+        ave_iou.append(np.mean(accu_iou))
+        ave_cls.append(np.mean(accu_cls))
+
 
     print("overall result")
-    print(accu_tp)
-    print(accu_fp)
-    print(accu_iou)
-    print(accu_cls)
+    print(ave_tp)
+    print(ave_fp)
+    print(ave_gt)
+    print(ave_pt)
+    print(ave_iou)
+    print(ave_cls)
 
 
 
