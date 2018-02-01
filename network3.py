@@ -53,6 +53,14 @@ class Net(nn.Module):
         x = torch.sigmoid(x)
         x = x.contiguous().view(self.batch_size, -1, self.cell_size, self.cell_size)
         x = x.permute(0,2,3,1)
+       # print(torch.sum(x).data.cpu().numpy())
+       # if math.isnan(torch.sum(x).data.cpu().numpy()):
+       #     for i0 in range(self.batch_size):
+       #         for i1 in range (self.cell_size):
+       #             for i2 in range (self.cell_size):
+       #                 for i3 in range (self.output_bits):
+       #                     if math.isnan(x[i0,i1,i2,i3].data.cpu().numpy()):
+       #                         print (x[i0,i1,i2,i3])
         return x
 
     def iou_calc(self, boxes1, boxes2): #x, y, w, h

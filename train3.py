@@ -67,7 +67,7 @@ if __name__ == '__main__':
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs_3')
-    batch_size = 5
+    batch_size = 20
     load_checkpoint= False
 
     print (datetime.datetime.now())
