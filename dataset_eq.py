@@ -103,7 +103,7 @@ def addlines(img):
 
 if __name__ == '__main__':
 
-    dataset_name = 'validation_eq'
+    dataset_name = 'test_eq'
     dataset_label = dataset_name+'_label'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     img_size = 448
     cell_w = img_size/cell_num
 
-    num_classes = 21
+    num_classes = 39
 
     for i in range(num_classes):
 #        import os
@@ -126,7 +126,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 1000
+    num_training = 100
     num_val = 0
     num_test = 0
 

@@ -42,7 +42,8 @@ def crop_image(img):
     return img
 
 def random_placement(addrs, pic_w, pic_h, num_classes):
-    background = cv2.imread('background.jpg', 0)
+    #background = cv2.imread('background.jpg', 0)
+    background = np.zeros((448,448))
     #img_ext = np.zeros((pic_h,pic_w), dtype=np.uint8)
     start_x=[]
     start_y=[]
@@ -50,7 +51,7 @@ def random_placement(addrs, pic_w, pic_h, num_classes):
     height = []
     labels=[]
 #    reX, reY = random.uniform(0.5,1.5),random.uniform(0.5,1.5)
-    
+
     reX, reY = random.uniform(0,1.5),random.uniform(0,1.5)
     for i in range(10):
         y = random.randint(0, pic_h - 78)
@@ -73,7 +74,7 @@ def random_placement(addrs, pic_w, pic_h, num_classes):
                     width.append(w)
                     start_x.append(x)
                     start_y.append(y)
-                    
+
                     for m in range(h):
                         for n in range(w):
                             if img[m,n] > background[y+m,x+n]:
@@ -111,7 +112,7 @@ def addlines(img):
 
 if __name__ == '__main__':
 
-    dataset_name = 'data_dis'
+    dataset_name = 'validation_close'
     dataset_label = dataset_name+'_label'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
@@ -124,7 +125,7 @@ if __name__ == '__main__':
     img_size = 448
     cell_w = img_size/cell_num
 
-    num_classes = 21
+    num_classes = 39
 
     for i in range(num_classes):
 #        import os
@@ -134,7 +135,7 @@ if __name__ == '__main__':
         temp_str = './crop_data/'+str(i)+'/*.csv'
         temp_path.append(temp_str)
 
-    num_training = 100
+    num_training = 1000
     num_val = 0
     num_test = 0
 

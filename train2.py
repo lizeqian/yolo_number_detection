@@ -68,14 +68,14 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs_all')
     batch_size = 20
-    load_checkpoint= True
+    load_checkpoint= False
 
     print (datetime.datetime.now())
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'data_dis_label'
-    img_path = 'data_dis'
-    validation_label = 'validation_dis_label'
-    validation_data = 'validation_dis'
+    csv_path = 'data_close_label'
+    img_path = 'data_close'
+    validation_label = 'validation_close_label'
+    validation_data  = 'validation_close'
     dataset = Rand_num(csv_path, img_path, 448, None)
     validationset = Rand_num(validation_label, validation_data, 448, None)
     sampler = RandomSampler(dataset)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     print('network loaded')
 
     net.cuda()
-    optimizer = optim.Adam(net.parameters(), lr=0.00001)
+    optimizer = optim.Adam(net.parameters(), lr=0.001)
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):

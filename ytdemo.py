@@ -73,7 +73,7 @@ if __name__ == '__main__':
     img_size = 448
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'validation_dis_label'
+    csv_path = 'validation_close_label'
     img_path = 'video_frames'
     dataset = Rand_num(csv_path, img_path, img_size, None)
     sampler = SequentialSampler(dataset)

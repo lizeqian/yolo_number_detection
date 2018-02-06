@@ -35,7 +35,7 @@ class Rand_num(Dataset):
         self.img_paths = img_path
         self.file_count = sum(len(files) for _, _, files in os.walk(img_path))
         self.num_classes = 0
-        self.num_cells = 28
+        self.num_cells = 7
 
         self.transform = transform
         #self.labels=image_labels
@@ -66,9 +66,9 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
     batch_size = 1
-    cell_size = 28
+    cell_size = 7
     load_checkpoint= True
-    num_cells = 28
+    num_cells = cell_size
     num_classes = 0
     img_size = 448
 
@@ -106,7 +106,6 @@ if __name__ == '__main__':
 #
             inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
 #
-            threshold=0.2
             net.eval()
             predicts = net.forward(inputs)
 #            loss, accu = net.loss_function_vec(outputs, labels, threshold, cal_accuracy=True)
@@ -133,7 +132,7 @@ if __name__ == '__main__':
             #predict_confidence = outputs[:, num_cells*num_cells*num_classes:(num_cells*num_cells*num_classes+num_cells*num_cells*2)].contiguous().view(1, num_cells, num_cells, 2)
             #predict_class = outputs[:,:num_cells*num_cells*num_classes].contiguous().view(1, num_cells, num_cells, num_classes)
             max_confidence = torch.max(predict_confidence, 3, keepdim = True)
-            threshold = 0.2
+            threshold = 0.1
             detect_ob = torch.ge(max_confidence[0], threshold).float()
             font = cv2.FONT_HERSHEY_PLAIN
             directory = os.path.dirname('../bounding_boxes/')
@@ -156,8 +155,8 @@ if __name__ == '__main__':
                         xp, yp, w, h = predict_boxes.data.cpu().numpy()[0,y,x,selection]
         #                print((xp, yp, w, h))
         #                print((x,y))
-                        lu = (int((x+xp)*16-w*img_size/2), int((y+yp)*16-h*img_size/2))
-                        rb = (int((x+xp)*16+w*img_size/2), int((y+yp)*16+h*img_size/2))
+                        lu = (int((x+xp)*64-w*img_size/2), int((y+yp)*64-h*img_size/2))
+                        rb = (int((x+xp)*64+w*img_size/2), int((y+yp)*64+h*img_size/2))
                         color = 255 #int(255 - img[lu[1], lu[0]])
 
                         #if class_ == gt_class:
