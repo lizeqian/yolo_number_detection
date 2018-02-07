@@ -73,8 +73,8 @@ if __name__ == '__main__':
     img_size = 448
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'validation_eq_label'
-    img_path = 'validation_eq'
+    csv_path = 'test_eq_label'
+    img_path = 'test'
     dataset = Rand_num(csv_path, img_path, img_size, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)
@@ -132,7 +132,7 @@ if __name__ == '__main__':
             #predict_confidence = outputs[:, num_cells*num_cells*num_classes:(num_cells*num_cells*num_classes+num_cells*num_cells*2)].contiguous().view(1, num_cells, num_cells, 2)
             #predict_class = outputs[:,:num_cells*num_cells*num_classes].contiguous().view(1, num_cells, num_cells, num_classes)
             max_confidence = torch.max(predict_confidence, 3, keepdim = True)
-            threshold = 0.1
+            threshold = 0.2
             detect_ob = torch.ge(max_confidence[0], threshold).float()
             font = cv2.FONT_HERSHEY_PLAIN
             directory = os.path.dirname('../bounding_boxes/')

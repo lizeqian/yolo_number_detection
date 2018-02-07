@@ -72,10 +72,10 @@ if __name__ == '__main__':
 
     print (datetime.datetime.now())
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'data_eq_label'
-    img_path = 'data_eq'
+    csv_path = 'validation_eq_label'
+    img_path = 'validation_eq'
     validation_label = 'validation_eq_label'
-    validation_data = 'validation_eq'
+    validation_data =  'validation_eq'
     dataset = Rand_num(csv_path, img_path, 448, None)
     validationset = Rand_num(validation_label, validation_data, 448, None)
     sampler = RandomSampler(dataset)
