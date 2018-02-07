@@ -117,6 +117,8 @@ class Net(nn.Module):
         #max_iou=max_iou[0]
         #object_mask = torch.mul(torch.ge(gt_iou,max_iou).float(), gt_object.float())
         #noob_mask = Variable(torch.ones(object_mask.size())) - object_mask
+        gt_noob1 = Variable(torch.ones(gt_object1.size())) - gt_object1
+        gt_noob2 = Variable(torch.ones(gt_object2.size())) - gt_object2
 
         #class loss
         delta_p1 = gt_classes1 - predict_class1
@@ -142,10 +144,15 @@ class Net(nn.Module):
                        torch.sum(size_delta_mask2**2))/self.batch_size * self.lambda_coord
         coord_loss = coord_loss1 + coord_loss2
         #iou loss
-        confidence_delta = predict_confidence - gt_iou
+        confidence_delta1 = predict_confidence1 - gt_iou1
+        confidence_delta2 = predict_confidence2 - gt_iou2
 
-        iou_loss = (torch.sum((confidence_delta*object_mask)**2)+   \
-                        self.lambda_noobj * torch.sum((confidence_delta*noob_mask)**2))/self.batch_size
+        iou_loss1 = (torch.sum((confidence_delta1*gt_object1)**2)+   \
+                        self.lambda_noobj * torch.sum((confidence_delta1*gt_noob1)**2))/self.batch_size
+        iou_loss2 = (torch.sum((confidence_delta2*gt_object2)**2)+   \
+                        self.lambda_noobj * torch.sum((confidence_delta2*gt_noob2)**2))/self.batch_size
+
+        iou_loss = iou_loss1 + iou_loss2
 
 #        print(class_loss)
 #        print(coord_loss)
@@ -155,47 +162,47 @@ class Net(nn.Module):
 #        pdb.set_trace()
 
         accuracy = []
-        if cal_accuracy is False:
-            accuracy = [0,0,0]
-        else:
-            #############detection accuracy###############
-            gt_noob = Variable(torch.ones(gt_object.size())) - gt_object
-            threshold = threshold
-            max_confidence = torch.max(predict_confidence, 3, keepdim = True)
-            detect_iou = torch.ge(max_confidence[0], threshold).float()
-            detect_iou_tp = detect_iou*gt_object  #tp
-            detect_iou_fp = detect_iou*gt_noob    #fp
-            sum_detect_tp = torch.sum(detect_iou_tp)
-            sum_detect_fp = torch.sum(detect_iou_fp)
-            sum_gtp = torch.sum(gt_object)
-            sum_detect = torch.sum(detect_iou)
-            accuracy.append([sum_detect_tp, sum_detect_fp, sum_gtp, sum_detect])
-            #detect_tp_accu = torch.sum(detect_iou_tp)/self.batch_size
-            #detect_fp_accu = torch.sum(detect_iou_fp)/self.batch_size
-            #detect_gt = torch.sum(gt_object)/self.batch_size
-            #detect_tp_accu = detect_tp_accu/detect_gt
-            #detect_fp_accu = detect_fp_accu/detect_gt
-            #accuracy.append(detect_tp_accu)
-            #accuracy.append(detect_fp_accu)
-            #############iou accuracy#####################
-            iou_accu = torch.sum(max_confidence[0]*detect_iou_tp)
-            iou_accu = iou_accu/sum_detect
-            accuracy.append(iou_accu)
-            #############class accuracy###################
-            predicted_class = torch.max(predict_class, 3, keepdim = True)[1]
-            groundtruth_classes = torch.max(gt_classes, 3, keepdim = True)[1]
-            class_eq = (predicted_class==groundtruth_classes)
-            class_hit = class_eq.float() * detect_iou *gt_object
-            class_accu = torch.sum(class_hit.data.float())/sum_detect
-            accuracy.append(class_accu)
-        if math.isnan(total_loss.data.cpu().numpy()):
-            for i0 in range(50):
-                for i1 in range (self.cell_size):
-                    for i2 in range (self.cell_size):
-                        for i3 in range (2):
-                            if math.isnan(confidence_delta[i0,i1,i2,i3].data.cpu().numpy()):
-                                print ([i0,i1,i2,i3])
-            Tracer()()
+#        if cal_accuracy is False:
+#            accuracy = [0,0,0]
+#        else:
+#            #############detection accuracy###############
+#            gt_noob = Variable(torch.ones(gt_object.size())) - gt_object
+#            threshold = threshold
+#            max_confidence = torch.max(predict_confidence, 3, keepdim = True)
+#            detect_iou = torch.ge(max_confidence[0], threshold).float()
+#            detect_iou_tp = detect_iou*gt_object  #tp
+#            detect_iou_fp = detect_iou*gt_noob    #fp
+#            sum_detect_tp = torch.sum(detect_iou_tp)
+#            sum_detect_fp = torch.sum(detect_iou_fp)
+#            sum_gtp = torch.sum(gt_object)
+#            sum_detect = torch.sum(detect_iou)
+#            accuracy.append([sum_detect_tp, sum_detect_fp, sum_gtp, sum_detect])
+#            #detect_tp_accu = torch.sum(detect_iou_tp)/self.batch_size
+#            #detect_fp_accu = torch.sum(detect_iou_fp)/self.batch_size
+#            #detect_gt = torch.sum(gt_object)/self.batch_size
+#            #detect_tp_accu = detect_tp_accu/detect_gt
+#            #detect_fp_accu = detect_fp_accu/detect_gt
+#            #accuracy.append(detect_tp_accu)
+#            #accuracy.append(detect_fp_accu)
+#            #############iou accuracy#####################
+#            iou_accu = torch.sum(max_confidence[0]*detect_iou_tp)
+#            iou_accu = iou_accu/sum_detect
+#            accuracy.append(iou_accu)
+#            #############class accuracy###################
+#            predicted_class = torch.max(predict_class, 3, keepdim = True)[1]
+#            groundtruth_classes = torch.max(gt_classes, 3, keepdim = True)[1]
+#            class_eq = (predicted_class==groundtruth_classes)
+#            class_hit = class_eq.float() * detect_iou *gt_object
+#            class_accu = torch.sum(class_hit.data.float())/sum_detect
+#            accuracy.append(class_accu)
+#        if math.isnan(total_loss.data.cpu().numpy()):
+#            for i0 in range(50):
+#                for i1 in range (self.cell_size):
+#                    for i2 in range (self.cell_size):
+#                        for i3 in range (2):
+#                            if math.isnan(confidence_delta[i0,i1,i2,i3].data.cpu().numpy()):
+#                                print ([i0,i1,i2,i3])
+#            Tracer()()
         return total_loss, accuracy
 
 

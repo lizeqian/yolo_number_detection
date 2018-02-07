@@ -112,7 +112,7 @@ def addlines(img):
 
 if __name__ == '__main__':
 
-    dataset_name = 'validation_close'
+    dataset_name = 'dual_test'
     dataset_label = dataset_name+'_label'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
@@ -135,7 +135,7 @@ if __name__ == '__main__':
         temp_str = './crop_data/'+str(i)+'/*.csv'
         temp_path.append(temp_str)
 
-    num_training = 1000
+    num_training = 100
     num_val = 0
     num_test = 0
 
