@@ -75,20 +75,19 @@ class Net(nn.Module):
         predict_class1 = predicts[:,:,:,:self.num_classes] #batch_size, cell_size, cell_size, num of class (class score)
         predict_confidence1 = predicts[:,:,:,self.num_classes]#batch_size, cell_size, cell_size, num of boxes (box confidence)
         predict_boxes1 = predicts[:,:,:,self.num_classes+1:self.num_classes+5]
+        
         predict_class2 = predicts[:,:,:,self.num_classes+5:2*self.num_classes+5] #batch_size, cell_size, cell_size, num of class (class score)
         predict_confidence2 = predicts[:,:,:,2*self.num_classes+5]#batch_size, cell_size, cell_size, num of boxes (box confidence)
-        predict_boxes2 = predicts[:,:,:,2*self.num_classes+6:]
+        predict_boxes2 = predicts[:,:,:,2*self.num_classes+6:2*self.num_classes+10]
 
 
         gt_object1 = labels[:, :, :, 4].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
         gt_boxes1 = labels[:, :, :, 0:4]
-        #gt_boxes1 = gt_boxes1.expand(self.batch_size, self.cell_size, self.cell_size, 2, 4)
         gt_classes1 = labels[:, :, :, 5:self.num_classes+5]
+        
         gt_object2 = labels[:, :, :, self.num_classes+9].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
         gt_boxes2 = labels[:, :, :, self.num_classes+5:self.num_classes+9]
-        #gt_boxes2 = gt_boxes2.expand(self.batch_size, self.cell_size, self.cell_size, 2, 4)
         gt_classes2 = labels[:, :, :, self.num_classes+10:]
-
         predict_boxes_tran1 = torch.stack([(predict_boxes1[:, :, :, 0] + self.offset) * 16,
                                           (predict_boxes1[:, :, :, 1] + self.offset.permute(0, 2, 1)) * 16,
                                            predict_boxes1[:, :, :, 2] * self.img_size,
@@ -135,6 +134,7 @@ class Net(nn.Module):
         size_delta_mask1 = size_delta1 * coord_mask1
         coord_loss1 = (torch.sum(coord_delta_mask1**2) + \
                        torch.sum(size_delta_mask1**2))/self.batch_size * self.lambda_coord
+                       
         coord_mask2 = gt_object2.contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
         coord_delta2 = predict_boxes2[:,:,:,:2] - gt_boxes2[:,:,:,:2]
         coord_delta_mask2 = coord_delta2 * coord_mask2
@@ -142,6 +142,7 @@ class Net(nn.Module):
         size_delta_mask2 = size_delta2 * coord_mask2
         coord_loss2 = (torch.sum(coord_delta_mask2**2) + \
                        torch.sum(size_delta_mask2**2))/self.batch_size * self.lambda_coord
+                       
         coord_loss = coord_loss1 + coord_loss2
         #iou loss
         confidence_delta1 = predict_confidence1 - gt_iou1
