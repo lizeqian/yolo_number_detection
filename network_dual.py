@@ -19,7 +19,7 @@ class Net(nn.Module):
         self.conv4 = nn.Conv2d(384, 256, 3, padding=1) #j=4, r=23, f=56
         self.conv5 = nn.Conv2d(256, self.output_bits, 5, padding=2) #j=16, r=71+16*6=167, f=28
         self.pool = nn.MaxPool2d(2, 2)
-        self.offset = torch.arange(0,self.cell_size).expand(self.cell_size*2,self.cell_size).contiguous().view(1, self.cell_size, self.cell_size).expand(self.batch_size,self.cell_size,self.cell_size)
+        self.offset = torch.arange(0,self.cell_size).expand(self.cell_size,self.cell_size).contiguous().view(1, self.cell_size, self.cell_size).expand(self.batch_size,self.cell_size,self.cell_size)
         self.offset = Variable(self.offset)
         self.lambda_coord = 5
         self.lambda_noobj = 0.5
@@ -81,11 +81,11 @@ class Net(nn.Module):
 
 
         gt_object1 = labels[:, :, :, 4].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
-        gt_boxes1 = labels[:, :, :, 0:4].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1, 4)
+        gt_boxes1 = labels[:, :, :, 0:4]
         #gt_boxes1 = gt_boxes1.expand(self.batch_size, self.cell_size, self.cell_size, 2, 4)
         gt_classes1 = labels[:, :, :, 5:self.num_classes+5]
         gt_object2 = labels[:, :, :, self.num_classes+9].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
-        gt_boxes2 = labels[:, :, :, self.num_classes+5:self.num_classes+9].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1, 4)
+        gt_boxes2 = labels[:, :, :, self.num_classes+5:self.num_classes+9]
         #gt_boxes2 = gt_boxes2.expand(self.batch_size, self.cell_size, self.cell_size, 2, 4)
         gt_classes2 = labels[:, :, :, self.num_classes+10:]
 
