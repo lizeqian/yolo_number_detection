@@ -60,8 +60,10 @@ class Rand_num(Dataset):
 
 if __name__ == '__main__':
     SAVE_PATH = './checkpoint/cp_all.pth'
-    #torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    #torch.backends.cudnn.benchmark = True
+    cuda=False
+    if cuda:
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+        torch.backends.cudnn.benchmark = True
     logger = Logger('./logs_all')
     batch_size = 1
     load_checkpoint= False
@@ -92,8 +94,8 @@ if __name__ == '__main__':
     if load_checkpoint:
         net.load_state_dict(torch.load(SAVE_PATH))
     print('network loaded')
-
-    #net.cuda()
+    if cuda:
+        net.cuda()
     optimizer = optim.Adam(net.parameters(), lr=0.001)
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
     for epoch in range(2000):
@@ -103,9 +105,10 @@ if __name__ == '__main__':
             inputs, labels = inputs.float()/256, labels.float()
 
             # wrap them in Variable
-
-            #inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-            inputs, labels = Variable(inputs), Variable(labels)
+            if cuda:
+                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            else:
+                inputs, labels = Variable(inputs), Variable(labels)
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -133,8 +136,10 @@ if __name__ == '__main__':
         for i, data in enumerate(val_loader, 0):
             inputs, labels = data
             inputs, labels = inputs.float()/256, labels.float()
-            #inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile = True)
-            inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile = True)
+            if cuda:
+                inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile = True)
+            else:
+                inputs, labels = Variable(inputs, volatile=True), Variable(labels, volatile = True)
             net.eval()
             outputs = net.forward(inputs)
             loss, _ = net.loss_function_vec(outputs, labels, 0.2)

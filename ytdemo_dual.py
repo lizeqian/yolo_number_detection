@@ -42,7 +42,7 @@ class Rand_num(Dataset):
 
     def __getitem__(self, index):
         image_addr = self.img_paths+'/'+str(index)+'.jpg'
-        label_addr = self.csv_paths+'/0.csv'
+        label_addr = self.csv_paths+'/'+str(index)+'.csv'
         img = np.expand_dims(cv2.imread(image_addr,0), 0)
         #label = self.labels[index]
 
@@ -62,8 +62,10 @@ class Rand_num(Dataset):
 
 if __name__ == '__main__':
     SAVE_PATH = './checkpoint/cp_3.pth'
-    torch.set_default_tensor_type('torch.cuda.FloatTensor')
-    torch.backends.cudnn.benchmark = True
+    gpu_run = False
+    if gpu_run:
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+        torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
     batch_size = 1
     cell_size = 28
@@ -90,7 +92,8 @@ if __name__ == '__main__':
     if load_checkpoint:
         net.load_state_dict(torch.load(SAVE_PATH))
 
-    net.cuda()
+    if gpu_run:
+        net.cuda()
 
     thld = np.arange(0,1,0.05)
     accu_tp=[]
@@ -104,7 +107,10 @@ if __name__ == '__main__':
 #
 #                # wrap them in Variable
 #
-            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            if gpu_run:
+                inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            else:
+                inputs, labels = Variable(inputs), Variable(labels)
 #
             net.eval()
             if load_checkpoint:
@@ -134,13 +140,13 @@ if __name__ == '__main__':
 
             for y in range(num_cells):
                 for x in range(num_cells):
-                    if detect_ob1.data.cpu().numpy()[0, y, x] == 1:
+                    if detect_ob1.data.cpu().numpy()[y, x] == 1:
                         xp, yp, w, h = predict_boxes1.data.cpu().numpy()[0,y,x]
                         lu = (int((x+xp)*16-w*img_size/2), int((y+yp)*16-h*img_size/2))
                         rb = (int((x+xp)*16+w*img_size/2), int((y+yp)*16+h*img_size/2))
                         color = 255 #int(255 - img[lu[1], lu[0]])
                         cv2.rectangle(img, lu, rb, color)
-                    if detect_ob2.data.cpu().numpy()[0, y, x] == 1:
+                    if detect_ob2.data.cpu().numpy()[y, x] == 1:
                         xp, yp, w, h = predict_boxes2.data.cpu().numpy()[0,y,x]
                         lu = (int((x+xp)*16-w*img_size/2), int((y+yp)*16-h*img_size/2))
                         rb = (int((x+xp)*16+w*img_size/2), int((y+yp)*16+h*img_size/2))

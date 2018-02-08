@@ -181,10 +181,13 @@ if __name__ == '__main__':
 
             label_onehot = np.zeros(num_classes)
             label_onehot[label] = 1
-            if csvarray[y_int*cell_num+x_int, 4]:
+            if csvarray[y_int*cell_num+x_int, 4] == 0:
                 csvarray[y_int*cell_num+x_int, :4] = [x_frac, y_frac, w_frac, h_frac]
                 csvarray[y_int*cell_num+x_int, 4] = 1
-                csvarray[y_int*cell_num+x_int, 5:] = label_onehot
+                csvarray[y_int*cell_num+x_int, 5:num_classes+5] = label_onehot
+                csvarray[y_int*cell_num+x_int, num_classes+5:num_classes+9] = [x_frac, y_frac, w_frac, h_frac]
+                csvarray[y_int*cell_num+x_int, num_classes+9] = 1
+                csvarray[y_int*cell_num+x_int, num_classes+10:] = label_onehot
             else:
                 csvarray[y_int*cell_num+x_int, num_classes+5:num_classes+9] = [x_frac, y_frac, w_frac, h_frac]
                 csvarray[y_int*cell_num+x_int, num_classes+9] = 1

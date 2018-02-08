@@ -72,13 +72,13 @@ class Net(nn.Module):
 
     def loss_function_vec(self, predicts, labels, threshold, cal_accuracy=False): #labels: [batch_size, cell_size_x, cell_size_y, 2+5] (x, y, w, h, C, p(c0), p(c1))
 
-        predict_class1 = predicts[:,:,:,:self.num_classes] #batch_size, cell_size, cell_size, num of class (class score)
-        predict_confidence1 = predicts[:,:,:,self.num_classes]#batch_size, cell_size, cell_size, num of boxes (box confidence)
-        predict_boxes1 = predicts[:,:,:,self.num_classes+1:self.num_classes+5]
+        predict_class1 = predicts[:, :, :, 5:self.num_classes+5] #batch_size, cell_size, cell_size, num of class (class score)
+        predict_confidence1 = predicts[:, :, :, 4]#batch_size, cell_size, cell_size, num of boxes (box confidence)
+        predict_boxes1 = predicts[:, :, :, 0:4]
         
-        predict_class2 = predicts[:,:,:,self.num_classes+5:2*self.num_classes+5] #batch_size, cell_size, cell_size, num of class (class score)
-        predict_confidence2 = predicts[:,:,:,2*self.num_classes+5]#batch_size, cell_size, cell_size, num of boxes (box confidence)
-        predict_boxes2 = predicts[:,:,:,2*self.num_classes+6:2*self.num_classes+10]
+        predict_class2 = predicts[:, :, :, self.num_classes+10:] #batch_size, cell_size, cell_size, num of class (class score)
+        predict_confidence2 = predicts[:, :, :, self.num_classes+9]#batch_size, cell_size, cell_size, num of boxes (box confidence)
+        predict_boxes2 = predicts[:, :, :, self.num_classes+5:self.num_classes+9]
 
 
         gt_object1 = labels[:, :, :, 4].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
