@@ -11,7 +11,7 @@ import os
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler
-from network3 import Net
+from network_dual import Net
 import torch.optim as optim
 from logger import Logger
 
@@ -61,22 +61,23 @@ class Rand_num(Dataset):
         return self.file_count
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp_3.pth'
-    gpu_run = False
+    SAVE_PATH = './checkpoint/cp_dual.pth'
+    gpu_run = True
     if gpu_run:
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
         torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
     batch_size = 1
     cell_size = 28
-    load_checkpoint= False
+    load_checkpoint= True
     num_cells = cell_size
     num_classes = 39
     img_size = 448
+    box_size = 80
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'dual_test_label'
-    img_path = 'dual_test'
+    csv_path = 'validation_dual_label'
+    img_path = 'validation_dual'
     dataset = Rand_num(csv_path, img_path, img_size, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)
@@ -116,6 +117,9 @@ if __name__ == '__main__':
             if load_checkpoint:
                 predicts = net.forward(inputs)
                 results = predicts
+                loss, accu = net.loss_function_vec(predicts, labels, 0.4, cal_accuracy=True)
+                #accu_p = [accu[0][0].data.cpu().numpy(), accu[0][1].data.cpu().numpy(), accu[0][2].data.cpu().numpy(), accu[0][3].data.cpu().numpy()]
+                print(accu)
             else:
                 results = labels
 
@@ -130,7 +134,7 @@ if __name__ == '__main__':
             predict_boxes2 = results[:,:,:,num_classes+5:num_classes+9]
 
 
-            threshold = 0.2
+            threshold = 0.4
             detect_ob1 = torch.ge(predict_confidence1[0], threshold).float()
             detect_ob2 = torch.ge(predict_confidence2[0], threshold).float()
             font = cv2.FONT_HERSHEY_PLAIN
@@ -142,15 +146,49 @@ if __name__ == '__main__':
                 for x in range(num_cells):
                     if detect_ob1.data.cpu().numpy()[y, x] == 1:
                         xp, yp, w, h = predict_boxes1.data.cpu().numpy()[0,y,x]
-                        lu = (int((x+xp)*16-w*img_size/2), int((y+yp)*16-h*img_size/2))
-                        rb = (int((x+xp)*16+w*img_size/2), int((y+yp)*16+h*img_size/2))
+                        lu = (int((x+xp)*16-w*box_size/2), int((y+yp)*16-h*box_size/2))
+                        rb = (int((x+xp)*16+w*box_size/2), int((y+yp)*16+h*box_size/2))
                         color = 255 #int(255 - img[lu[1], lu[0]])
+                        class_1 = np.argmax(predict_class1.data.cpu().numpy()[0,y,x])
+                        class_2 = np.argmax(predict_class2.data.cpu().numpy()[0,y,x])
+
+                        #if class_ == gt_class:
+                        #    color = 255
+                        #else :
+                        #    color = 100
+                        if class_1 < 10:
+                            cls_str = str(class_1)
+                        elif class_1 < 36:
+                            cls_str = chr(class_1 + 87)
+                        elif class_1 == 36:
+                            cls_str = "+"
+                        elif class_1 == 37:
+                            cls_str = "-"
+                        elif class_1 == 38:
+                            cls_str = "="
+                        cv2.putText(img,cls_str,(lu[0],lu[1]), font, 1,(color,color,color), 1,cv2.LINE_AA, False)
                         cv2.rectangle(img, lu, rb, color)
                     if detect_ob2.data.cpu().numpy()[y, x] == 1:
                         xp, yp, w, h = predict_boxes2.data.cpu().numpy()[0,y,x]
-                        lu = (int((x+xp)*16-w*img_size/2), int((y+yp)*16-h*img_size/2))
-                        rb = (int((x+xp)*16+w*img_size/2), int((y+yp)*16+h*img_size/2))
+                        lu = (int((x+xp)*16-w*box_size/2), int((y+yp)*16-h*box_size/2))
+                        rb = (int((x+xp)*16+w*box_size/2), int((y+yp)*16+h*box_size/2))
                         color = 255 #int(255 - img[lu[1], lu[0]])
+
+                        #if class_ == gt_class:
+                        #    color = 255
+                        #else :
+                        #    color = 100
+                        if class_2 < 10:
+                            cls_str = str(class_2)
+                        elif class_2 < 36:
+                            cls_str = chr(class_2 + 87)
+                        elif class_2 == 36:
+                            cls_str = "+"
+                        elif class_2 == 37:
+                            cls_str = "-"
+                        elif class_2 == 38:
+                            cls_str = "="
+                        cv2.putText(img,cls_str,(lu[0],lu[1]), font, 1,(color,color,color), 1,cv2.LINE_AA, False)
                         cv2.rectangle(img, lu, rb, color)
 
 

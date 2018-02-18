@@ -112,7 +112,7 @@ def addlines(img):
 
 if __name__ == '__main__':
 
-    dataset_name = 'dual_test'
+    dataset_name = 'data_dual_8'
     dataset_label = dataset_name+'_label'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
@@ -127,6 +127,8 @@ if __name__ == '__main__':
 
     num_classes = 39
 
+    max_size=80
+
     for i in range(num_classes):
 #        import os
 #        relevant_path = "./trainingSet/"
@@ -135,7 +137,7 @@ if __name__ == '__main__':
         temp_str = './crop_data/'+str(i)+'/*.csv'
         temp_path.append(temp_str)
 
-    num_training = 100
+    num_training = 80000
     num_val = 0
     num_test = 0
 
@@ -176,8 +178,8 @@ if __name__ == '__main__':
             y_int = int(y//cell_w)
             x_frac = (x%cell_w)/cell_w
             y_frac = (y%cell_w)/cell_w
-            w_frac = w/img_size
-            h_frac = h/img_size
+            w_frac = w/max_size
+            h_frac = h/max_size
 
             label_onehot = np.zeros(num_classes)
             label_onehot[label] = 1

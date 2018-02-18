@@ -59,21 +59,21 @@ class Rand_num(Dataset):
         return self.file_count
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp_all.pth'
-    cuda=False
+    SAVE_PATH = './checkpoint/cp_dual.pth'
+    cuda=True
     if cuda:
         torch.set_default_tensor_type('torch.cuda.FloatTensor')
         torch.backends.cudnn.benchmark = True
     logger = Logger('./logs_all')
-    batch_size = 1
-    load_checkpoint= False
+    batch_size = 20
+    load_checkpoint= True
 
     print (datetime.datetime.now())
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'dual_test_label'
-    img_path = 'dual_test'
-    validation_label = 'dual_test_label'
-    validation_data  = 'dual_test'
+    csv_path = 'data_dual_label'
+    img_path = 'data_dual'
+    validation_label = 'validation_dual_label'
+    validation_data  = 'validation_dual'
     dataset = Rand_num(csv_path, img_path, 448, None)
     validationset = Rand_num(validation_label, validation_data, 448, None)
     sampler = RandomSampler(dataset)

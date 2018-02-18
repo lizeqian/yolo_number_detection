@@ -75,17 +75,17 @@ class Net(nn.Module):
         predict_class1 = predicts[:, :, :, 5:self.num_classes+5] #batch_size, cell_size, cell_size, num of class (class score)
         predict_confidence1 = predicts[:, :, :, 4]#batch_size, cell_size, cell_size, num of boxes (box confidence)
         predict_boxes1 = predicts[:, :, :, 0:4]
-        
+
         predict_class2 = predicts[:, :, :, self.num_classes+10:] #batch_size, cell_size, cell_size, num of class (class score)
         predict_confidence2 = predicts[:, :, :, self.num_classes+9]#batch_size, cell_size, cell_size, num of boxes (box confidence)
         predict_boxes2 = predicts[:, :, :, self.num_classes+5:self.num_classes+9]
 
 
-        gt_object1 = labels[:, :, :, 4].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
+        gt_object1 = labels[:, :, :, 4]
         gt_boxes1 = labels[:, :, :, 0:4]
         gt_classes1 = labels[:, :, :, 5:self.num_classes+5]
-        
-        gt_object2 = labels[:, :, :, self.num_classes+9].contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
+
+        gt_object2 = labels[:, :, :, self.num_classes+9]
         gt_boxes2 = labels[:, :, :, self.num_classes+5:self.num_classes+9]
         gt_classes2 = labels[:, :, :, self.num_classes+10:]
         predict_boxes_tran1 = torch.stack([(predict_boxes1[:, :, :, 0] + self.offset) * 16,
@@ -121,9 +121,9 @@ class Net(nn.Module):
 
         #class loss
         delta_p1 = gt_classes1 - predict_class1
-        delta_p_obj1 = delta_p1 * gt_object1
+        delta_p_obj1 = delta_p1 * gt_object1.contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
         delta_p2 = gt_classes2 - predict_class2
-        delta_p_obj2 = delta_p2 * gt_object2
+        delta_p_obj2 = delta_p2 * gt_object2.contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
         class_loss = self.lambda_class*torch.sum(delta_p_obj1**2)/self.batch_size + self.lambda_class*torch.sum(delta_p_obj2**2)/self.batch_size
 
         #coord loss
@@ -134,7 +134,7 @@ class Net(nn.Module):
         size_delta_mask1 = size_delta1 * coord_mask1
         coord_loss1 = (torch.sum(coord_delta_mask1**2) + \
                        torch.sum(size_delta_mask1**2))/self.batch_size * self.lambda_coord
-                       
+
         coord_mask2 = gt_object2.contiguous().view(self.batch_size, self.cell_size, self.cell_size, 1)
         coord_delta2 = predict_boxes2[:,:,:,:2] - gt_boxes2[:,:,:,:2]
         coord_delta_mask2 = coord_delta2 * coord_mask2
@@ -142,7 +142,7 @@ class Net(nn.Module):
         size_delta_mask2 = size_delta2 * coord_mask2
         coord_loss2 = (torch.sum(coord_delta_mask2**2) + \
                        torch.sum(size_delta_mask2**2))/self.batch_size * self.lambda_coord
-                       
+
         coord_loss = coord_loss1 + coord_loss2
         #iou loss
         confidence_delta1 = predict_confidence1 - gt_iou1
@@ -163,29 +163,24 @@ class Net(nn.Module):
 #        pdb.set_trace()
 
         accuracy = []
-#        if cal_accuracy is False:
-#            accuracy = [0,0,0]
-#        else:
-#            #############detection accuracy###############
-#            gt_noob = Variable(torch.ones(gt_object.size())) - gt_object
-#            threshold = threshold
-#            max_confidence = torch.max(predict_confidence, 3, keepdim = True)
-#            detect_iou = torch.ge(max_confidence[0], threshold).float()
-#            detect_iou_tp = detect_iou*gt_object  #tp
-#            detect_iou_fp = detect_iou*gt_noob    #fp
-#            sum_detect_tp = torch.sum(detect_iou_tp)
-#            sum_detect_fp = torch.sum(detect_iou_fp)
-#            sum_gtp = torch.sum(gt_object)
-#            sum_detect = torch.sum(detect_iou)
-#            accuracy.append([sum_detect_tp, sum_detect_fp, sum_gtp, sum_detect])
-#            #detect_tp_accu = torch.sum(detect_iou_tp)/self.batch_size
-#            #detect_fp_accu = torch.sum(detect_iou_fp)/self.batch_size
-#            #detect_gt = torch.sum(gt_object)/self.batch_size
-#            #detect_tp_accu = detect_tp_accu/detect_gt
-#            #detect_fp_accu = detect_fp_accu/detect_gt
-#            #accuracy.append(detect_tp_accu)
-#            #accuracy.append(detect_fp_accu)
-#            #############iou accuracy#####################
+        if cal_accuracy is False:
+            accuracy = [0,0,0]
+        else:
+            #############detection accuracy###############
+            threshold = threshold
+            detect_iou1 = torch.ge(predict_confidence1, threshold).float()
+            detect_iou2 = torch.ge(predict_confidence2, threshold).float()
+            detect_iou = torch.ge((detect_iou1 + detect_iou2), 1)
+            gt_object = torch.ge((gt_object1+gt_object2),1)
+            gt_noob = torch.ge((gt_noob1+gt_noob2),1)
+            detect_iou_tp = detect_iou*gt_object  #tp
+            detect_iou_fp = detect_iou*gt_noob    #fp
+            sum_detect_tp = torch.sum(detect_iou_tp)
+            sum_detect_fp = torch.sum(detect_iou_fp)
+            sum_gtp = torch.sum(gt_object)
+            sum_detect = torch.sum(detect_iou)
+            accuracy.append([sum_detect_tp.data.cpu().numpy()[0], sum_detect_fp.data.cpu().numpy()[0], sum_gtp.data.cpu().numpy()[0], sum_detect.data.cpu().numpy()[0]])
+            #############iou accuracy#####################
 #            iou_accu = torch.sum(max_confidence[0]*detect_iou_tp)
 #            iou_accu = iou_accu/sum_detect
 #            accuracy.append(iou_accu)
