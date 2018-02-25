@@ -10,7 +10,7 @@ class Net(nn.Module):
         super(Net, self).__init__()
         self.num_classes = 0
         self.cell_size = 7
-        self.img_size=448
+        self.img_size= 112
         self.batch_size = batch_size
         self.output_bits = self.num_classes+10
         self.conv1 = nn.Conv2d(1, 64, 7, padding=3)  #j=1, r=7
@@ -19,10 +19,9 @@ class Net(nn.Module):
         self.conv4 = nn.Conv2d(384, 256, 3, padding=1) #j=4, r=23
         self.conv5 = nn.Conv2d(256, 256, 7, padding=3) #j=16, r=71+16*6=167
         self.pool = nn.MaxPool2d(2, 2)
-        self.pool2 = nn.MaxPool2d(4, 4)
         self.offset = torch.arange(0,self.cell_size).expand(self.cell_size*2,self.cell_size).contiguous().view(2, self.cell_size, self.cell_size).permute(1, 2, 0).contiguous().view(1,self.cell_size,self.cell_size,2).expand(self.batch_size,self.cell_size,self.cell_size,2)
         self.offset = Variable(self.offset)
-        self.lambda_coord = 5
+        self.lambda_coord = 1
         self.lambda_noobj = 0.5
         self.lambda_class = 1
         self.batchnorm1=nn.BatchNorm2d(64)
@@ -43,8 +42,8 @@ class Net(nn.Module):
 
 
     def forward(self, x):
-        x = self.pool2(F.leaky_relu(self.batchnorm1(self.conv1(x))))
-        x = self.pool2(F.leaky_relu(self.batchnorm2(self.conv2(x))))
+        x = self.pool(F.leaky_relu(self.batchnorm1(self.conv1(x))))
+        x = self.pool(F.leaky_relu(self.batchnorm2(self.conv2(x))))
         x = self.pool(F.leaky_relu(self.batchnorm3(self.conv3(x))))
         x = self.pool(F.leaky_relu(self.batchnorm4(self.conv4(x))))
         x = self.batchnorm5(self.conv5(x))
@@ -53,6 +52,8 @@ class Net(nn.Module):
         x = torch.sigmoid(x)
         x = x.contiguous().view(self.batch_size, -1, self.cell_size, self.cell_size)
         x = x.permute(0,2,3,1)
+        if math.isnan(torch.sum(x).data.cpu().numpy()):
+            Tracer()()
        # print(torch.sum(x).data.cpu().numpy())
        # if math.isnan(torch.sum(x).data.cpu().numpy()):
        #     for i0 in range(self.batch_size):

@@ -70,11 +70,11 @@ if __name__ == '__main__':
     load_checkpoint= True
     num_cells = cell_size
     num_classes = 0
-    img_size = 448
+    img_size = 112
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     csv_path = 'test_eq_label'
-    img_path = 'test'
+    img_path = 'test_eq'
     dataset = Rand_num(csv_path, img_path, img_size, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)
@@ -132,10 +132,10 @@ if __name__ == '__main__':
             #predict_confidence = outputs[:, num_cells*num_cells*num_classes:(num_cells*num_cells*num_classes+num_cells*num_cells*2)].contiguous().view(1, num_cells, num_cells, 2)
             #predict_class = outputs[:,:num_cells*num_cells*num_classes].contiguous().view(1, num_cells, num_cells, num_classes)
             max_confidence = torch.max(predict_confidence, 3, keepdim = True)
-            threshold = 0.2
+            threshold = 0.1
             detect_ob = torch.ge(max_confidence[0], threshold).float()
             font = cv2.FONT_HERSHEY_PLAIN
-            directory = os.path.dirname('../bounding_boxes/')
+            directory = os.path.dirname('bounding_boxes/')
             if not os.path.exists(directory):
                 os.makedirs(directory)
 #####for test#######
@@ -155,8 +155,8 @@ if __name__ == '__main__':
                         xp, yp, w, h = predict_boxes.data.cpu().numpy()[0,y,x,selection]
         #                print((xp, yp, w, h))
         #                print((x,y))
-                        lu = (int((x+xp)*64-w*img_size/2), int((y+yp)*64-h*img_size/2))
-                        rb = (int((x+xp)*64+w*img_size/2), int((y+yp)*64+h*img_size/2))
+                        lu = (int((x+xp)*16-w*img_size/2), int((y+yp)*16-h*img_size/2))
+                        rb = (int((x+xp)*16+w*img_size/2), int((y+yp)*16+h*img_size/2))
                         color = 255 #int(255 - img[lu[1], lu[0]])
 
                         #if class_ == gt_class:
@@ -194,7 +194,7 @@ if __name__ == '__main__':
         #                print(rb)
 
 
-            write_path = '../bounding_boxes/'+str(i)+'.jpg'
+            write_path = 'bounding_boxes/'+str(i)+'.jpg'
             cv2.imwrite(write_path,img)
     print('Finished Marking')
 

@@ -67,17 +67,17 @@ if __name__ == '__main__':
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs_3')
-    batch_size = 20
-    load_checkpoint= False
+    batch_size = 50
+    load_checkpoint= True
 
     print (datetime.datetime.now())
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'validation_eq_label'
-    img_path = 'validation_eq'
-    validation_label = 'validation_eq_label'
-    validation_data =  'validation_eq'
-    dataset = Rand_num(csv_path, img_path, 448, None)
-    validationset = Rand_num(validation_label, validation_data, 448, None)
+    csv_path = 'test_eq_label'
+    img_path = 'test_eq'
+    validation_label = 'test_eq_label'
+    validation_data =  'test_eq'
+    dataset = Rand_num(csv_path, img_path, 112, None)
+    validationset = Rand_num(validation_label, validation_data, 112, None)
     sampler = RandomSampler(dataset)
     val_sampler = RandomSampler(validationset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=2)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
     print('network loaded')
 
     net.cuda()
-    optimizer = optim.Adam(net.parameters(), lr=0.001)
+    optimizer = optim.Adam(net.parameters(), lr=0.00001)
     scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):
