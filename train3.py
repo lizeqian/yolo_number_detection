@@ -1,20 +1,18 @@
-import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image
 import torch
-from torchvision import models, transforms
 from torch.autograd import Variable
 import datetime
 import cv2
-import glob
 import os
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import RandomSampler
 from network3 import Net
+import vgg
 import torch.optim as optim
 from logger import Logger
 import torch.optim.lr_scheduler as lr_scheduler
+
 
 def tensor_to_img(img, mean=0, std=1):
         img = img.numpy()[0]
@@ -66,18 +64,21 @@ if __name__ == '__main__':
     SAVE_PATH = './checkpoint/cp_3.pth'
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
-    logger = Logger('./logs_3')
-    batch_size = 50
+    log_dir = './logs'
+    import shutil
+    shutil.rmtree(log_dir)
+    logger = Logger(log_dir)
+    batch_size = 1
     load_checkpoint= True
 
     print (datetime.datetime.now())
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'test_eq_label'
-    img_path = 'test_eq'
-    validation_label = 'test_eq_label'
-    validation_data =  'test_eq'
-    dataset = Rand_num(csv_path, img_path, 112, None)
-    validationset = Rand_num(validation_label, validation_data, 112, None)
+    csv_path = 'data_eq_label'
+    img_path = 'data_eq'
+    validation_label = 'data_eq_label'
+    validation_data =  'data_eq'
+    dataset = Rand_num(csv_path, img_path, 224, None)
+    validationset = Rand_num(validation_label, validation_data, 224, None)
     sampler = RandomSampler(dataset)
     val_sampler = RandomSampler(validationset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=2)
@@ -91,15 +92,18 @@ if __name__ == '__main__':
 #    images=tensor_to_img(images)
 #    print (labels)
 #    print (images)
-
+    vgg_model = vgg.vgg11_bn(num_classes=7*7*5)
     net = Net(batch_size)
     if load_checkpoint:
-        net.load_state_dict(torch.load(SAVE_PATH))
+        vgg_model.load_state_dict(torch.load(SAVE_PATH))
     print('network loaded')
 
     net.cuda()
-    optimizer = optim.Adam(net.parameters(), lr=0.00001)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
+    vgg_model.cuda()
+
+    #optimizer = optim.Adam(vgg_model.parameters(), lr=0.0001)
+    optimizer = optim.SGD(vgg_model.parameters(), lr=0.000001)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True, eps=1e-12)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):
             # get the inputs
@@ -115,9 +119,14 @@ if __name__ == '__main__':
 
             # forward + backward + optimize
             #print (inputs)
+            vgg_model.train()
             net.train()
-            outputs = net.forward(inputs)
-            loss, _ = net.loss_function_vec(outputs, labels, 0.5)
+            outputs = vgg_model.forward(inputs)
+            outputs = torch.sigmoid(outputs)
+            outputs = outputs.contiguous().view(batch_size, -1, 7, 7)
+            outputs = outputs.permute(0,2,3,1)
+            #print(outputs[:,:,:,:2])
+            loss, _, _, _, _, _ = net.loss_function_vec(outputs, labels, 0.5)
             loss.backward()
             optimizer.step()
             # print statistics
@@ -131,23 +140,31 @@ if __name__ == '__main__':
                 print(loss.data.cpu().numpy())
                 logger.scalar_summary('training loss', loss.data.cpu().numpy(), epoch)
             if epoch % 1 == 0 and i==0:
-                torch.save(net.state_dict(), SAVE_PATH)
+                torch.save(vgg_model.state_dict(), SAVE_PATH)
         total_loss=[]
         for i, data in enumerate(val_loader, 0):
             inputs, labels = data
             inputs, labels = inputs.float()/256, labels.float()
             inputs, labels = Variable(inputs.cuda(), volatile=True), Variable(labels.cuda(), volatile = True)
+            vgg_model.eval()
             net.eval()
-            outputs = net.forward(inputs)
-            loss, _ = net.loss_function_vec(outputs, labels, 0.2)
+            outputs = vgg_model.forward(inputs)
+            outputs = torch.sigmoid(outputs)
+            outputs = outputs.contiguous().view(batch_size, -1, 7, 7)
+            outputs = outputs.permute(0,2,3,1)
+            loss, _, coord_loss, size_loss, pred_con, gt_con = net.loss_function_vec(outputs, labels, 0.2)
             total_loss.append(loss.data.cpu().numpy())
         mean_loss = np.mean(total_loss)
         print (datetime.datetime.now())
         print('val loss is %g'%(mean_loss))
         logger.scalar_summary('validation loss', mean_loss, epoch)
+        logger.scalar_summary('coord loss', coord_loss.data.cpu().numpy(), epoch)
+        logger.scalar_summary('size loss', size_loss.data.cpu().numpy(), epoch)
+        logger.scalar_summary('predicted confidence', pred_con.data.cpu().numpy(), epoch)
+        logger.scalar_summary('ground truth iou', gt_con.data.cpu().numpy(), epoch)
         scheduler.step(mean_loss)
 
 
-    torch.save(net.state_dict(), SAVE_PATH)
+    torch.save(vgg_model.state_dict(), SAVE_PATH)
     print('Finished Training')
 

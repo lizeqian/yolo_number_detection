@@ -58,7 +58,7 @@ def random_placement(addrs, pic_w, pic_h, num_classes):
     width = []
     height = []
 #    reX, reY = random.uniform(0.5,1.5),random.uniform(0.5,1.5)
-    for i in range(10):
+    for i in range(1):
         img=equation_gen(addrs, num_classes, pic_w)
         h = np.shape(img)[0]
         w = np.shape(img)[1]
@@ -103,7 +103,7 @@ def addlines(img):
 
 if __name__ == '__main__':
 
-    dataset_name = 'valid_eq'
+    dataset_name = 'data_eq'
     dataset_label = dataset_name+'_label'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     random.seed(datetime.now())
     temp_path = []
     cell_num = 7
-    img_size = 112
+    img_size = 224
     cell_w = img_size/cell_num
 
     num_classes = 39
@@ -126,7 +126,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 100000
+    num_training = 1
     num_val = 0
     num_test = 0
 
