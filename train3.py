@@ -68,15 +68,15 @@ if __name__ == '__main__':
     import shutil
     shutil.rmtree(log_dir)
     logger = Logger(log_dir)
-    batch_size = 1
-    load_checkpoint= True
+    batch_size = 20
+    load_checkpoint= False
 
     print (datetime.datetime.now())
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     csv_path = 'data_eq_label'
     img_path = 'data_eq'
-    validation_label = 'data_eq_label'
-    validation_data =  'data_eq'
+    validation_label = 'validation_eq_label'
+    validation_data =  'validation_eq'
     dataset = Rand_num(csv_path, img_path, 224, None)
     validationset = Rand_num(validation_label, validation_data, 224, None)
     sampler = RandomSampler(dataset)
@@ -92,7 +92,7 @@ if __name__ == '__main__':
 #    images=tensor_to_img(images)
 #    print (labels)
 #    print (images)
-    vgg_model = vgg.vgg11_bn(num_classes=7*7*5)
+    vgg_model = vgg.vgg19_bn(num_classes=7*7*10)
     net = Net(batch_size)
     if load_checkpoint:
         vgg_model.load_state_dict(torch.load(SAVE_PATH))
@@ -101,9 +101,9 @@ if __name__ == '__main__':
     net.cuda()
     vgg_model.cuda()
 
-    #optimizer = optim.Adam(vgg_model.parameters(), lr=0.0001)
-    optimizer = optim.SGD(vgg_model.parameters(), lr=0.000001)
-    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True, eps=1e-12)
+    optimizer = optim.Adam(vgg_model.parameters(), lr=0.0001)
+    #optimizer = optim.SGD(vgg_model.parameters(), lr=0.01)
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True,threshold=0.000001, eps=1e-16)
     for epoch in range(2000):
         for i, data in enumerate(loader, 0):
             # get the inputs
@@ -126,7 +126,7 @@ if __name__ == '__main__':
             outputs = outputs.contiguous().view(batch_size, -1, 7, 7)
             outputs = outputs.permute(0,2,3,1)
             #print(outputs[:,:,:,:2])
-            loss, _, _, _, _, _ = net.loss_function_vec(outputs, labels, 0.5)
+            loss, _, _, _, _ = net.loss_function_vec(outputs, labels, 0.5)
             loss.backward()
             optimizer.step()
             # print statistics
@@ -152,7 +152,7 @@ if __name__ == '__main__':
             outputs = torch.sigmoid(outputs)
             outputs = outputs.contiguous().view(batch_size, -1, 7, 7)
             outputs = outputs.permute(0,2,3,1)
-            loss, _, coord_loss, size_loss, pred_con, gt_con = net.loss_function_vec(outputs, labels, 0.2)
+            loss, _, coord_loss, size_loss, iou_loss = net.loss_function_vec(outputs, labels, 0.2)
             total_loss.append(loss.data.cpu().numpy())
         mean_loss = np.mean(total_loss)
         print (datetime.datetime.now())
@@ -160,8 +160,7 @@ if __name__ == '__main__':
         logger.scalar_summary('validation loss', mean_loss, epoch)
         logger.scalar_summary('coord loss', coord_loss.data.cpu().numpy(), epoch)
         logger.scalar_summary('size loss', size_loss.data.cpu().numpy(), epoch)
-        logger.scalar_summary('predicted confidence', pred_con.data.cpu().numpy(), epoch)
-        logger.scalar_summary('ground truth iou', gt_con.data.cpu().numpy(), epoch)
+        logger.scalar_summary('iou_loss', iou_loss.data.cpu().numpy(), epoch)
         scheduler.step(mean_loss)
 
 

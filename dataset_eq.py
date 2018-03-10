@@ -38,10 +38,10 @@ def crop_image(img):
     return img
 
 def equation_gen(addrs, num_classes, pic_w):
-    num_sym = random.randint(1, 10)
-    max_w = np.minimum(100//num_sym, 9)
+    num_sym =  random.randint(1, 10)
+    max_w = np.minimum(100//num_sym, 24)
     reX = random.randint(8, max_w)
-    reY = random.randint(8, 24)
+    reY = random.randint(8, 16)
     img = np.zeros((reY, reX*num_sym))
     for i in range(num_sym):
         label = random.randint(0, num_classes-1)
@@ -58,7 +58,7 @@ def random_placement(addrs, pic_w, pic_h, num_classes):
     width = []
     height = []
 #    reX, reY = random.uniform(0.5,1.5),random.uniform(0.5,1.5)
-    for i in range(1):
+    for i in range(10):
         img=equation_gen(addrs, num_classes, pic_w)
         h = np.shape(img)[0]
         w = np.shape(img)[1]
@@ -103,7 +103,7 @@ def addlines(img):
 
 if __name__ == '__main__':
 
-    dataset_name = 'data_eq'
+    dataset_name = 'validation_eq'
     dataset_label = dataset_name+'_label'
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
@@ -126,7 +126,7 @@ if __name__ == '__main__':
         temp_str = './trainingSet/'+str(i)+'/*.jpg'
         temp_path.append(temp_str)
 
-    num_training = 1
+    num_training = 100
     num_val = 0
     num_test = 0
 

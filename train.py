@@ -36,8 +36,8 @@ class Rand_num(Dataset):
         self.csv_paths = csv_path
         self.img_paths = img_path
         self.file_count = sum(len(files) for _, _, files in os.walk(img_path))
-        self.num_classes = 21
-        self.num_cells = 28
+        self.num_classes = 0
+        self.num_cells = 7
 
         self.transform = transform
         #self.labels=image_labels
@@ -72,12 +72,12 @@ if __name__ == '__main__':
 
     print (datetime.datetime.now())
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'data_dis_label'
-    img_path = 'data_dis'
-    validation_label = 'validation_dis_label'
-    validation_data = 'validation_dis'
-    dataset = Rand_num(csv_path, img_path, 448, None)
-    validationset = Rand_num(validation_label, validation_data, 448, None)
+    csv_path = 'data_eq_label'
+    img_path = 'data_eq'
+    validation_label = 'validation_eq_label'
+    validation_data = 'validation_eq'
+    dataset = Rand_num(csv_path, img_path, 224, None)
+    validationset = Rand_num(validation_label, validation_data, 224, None)
     sampler = RandomSampler(dataset)
     val_sampler = RandomSampler(validationset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=2)

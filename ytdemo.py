@@ -11,7 +11,7 @@ import os
 from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SequentialSampler
-from network2 import Net
+from network import Net
 import torch.optim as optim
 from logger import Logger
 
@@ -34,8 +34,8 @@ class Rand_num(Dataset):
         self.csv_paths = csv_path
         self.img_paths = img_path
         self.file_count = sum(len(files) for _, _, files in os.walk(img_path))
-        self.num_classes = 39
-        self.num_cells = 28
+        self.num_classes = 0
+        self.num_cells = 7
 
         self.transform = transform
         #self.labels=image_labels
@@ -61,20 +61,20 @@ class Rand_num(Dataset):
         return self.file_count
 
 if __name__ == '__main__':
-    SAVE_PATH = './checkpoint/cp_all.pth'
+    SAVE_PATH = './checkpoint/cp.pth'
     torch.set_default_tensor_type('torch.cuda.FloatTensor')
     torch.backends.cudnn.benchmark = True
     logger = Logger('./logs')
     batch_size = 1
-    cell_size = 28
+    cell_size = 7
     load_checkpoint= True
-    num_cells = 28
-    num_classes = 39
-    img_size = 448
+    num_cells = 7
+    num_classes = 0
+    img_size = 224
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'validation_close_label'
-    img_path = 'video_frames'
+    csv_path = 'validation_eq_label'
+    img_path = 'validation_eq'
     dataset = Rand_num(csv_path, img_path, img_size, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)
@@ -124,9 +124,9 @@ if __name__ == '__main__':
 #    plt.plot(thld, accu_fp, 'b')
 #    plt.plot(thld, accu_iou, 'g')
 #    plt.show()
-            gt_classes = labels[:, :, :, 5:]
+            #gt_classes = labels[:, :, :, 5:]
             img = (inputs*256).data.cpu().int().numpy()[0,0]
-            predict_class = predicts[:,:,:,:num_classes] #batch_size, cell_size, cell_size, num of class (class score)
+            #predict_class = predicts[:,:,:,:num_classes] #batch_size, cell_size, cell_size, num of class (class score)
             predict_confidence = predicts[:,:,:,num_classes:num_classes+2]#batch_size, cell_size, cell_size, num of boxes (box confidence)
             predict_boxes = predicts[:,:,:,num_classes+2:num_classes+10].contiguous().view(batch_size, cell_size, cell_size, 2, 4) # batch_size, cell_size, cell_size, boxes_num, 4 (box coordinate)
             #predict_boxes = outputs[:, (num_cells*num_cells*num_classes+num_cells*num_cells*2):].contiguous().view(1, num_cells, num_cells, 2, 4)
@@ -136,7 +136,7 @@ if __name__ == '__main__':
             threshold = 0.2
             detect_ob = torch.ge(max_confidence[0], threshold).float()
             font = cv2.FONT_HERSHEY_PLAIN
-            directory = os.path.dirname('../bounding_boxes/')
+            directory = os.path.dirname('bounding_boxes/')
             if not os.path.exists(directory):
                 os.makedirs(directory)
 #####for test#######
@@ -151,30 +151,30 @@ if __name__ == '__main__':
                 for x in range(num_cells):
                     if detect_ob.data.cpu().numpy()[0, y, x, 0] == 1:
                         selection = max_confidence[1].data.cpu().numpy()[0,y,x,0]
-                        class_ = np.argmax(predict_class.data.cpu().numpy()[0,y,x])
-                        gt_class = np.argmax(gt_classes.data.cpu().numpy()[0,y,x])
+                        #class_ = np.argmax(predict_class.data.cpu().numpy()[0,y,x])
+                        #gt_class = np.argmax(gt_classes.data.cpu().numpy()[0,y,x])
                         xp, yp, w, h = predict_boxes.data.cpu().numpy()[0,y,x,selection]
         #                print((xp, yp, w, h))
         #                print((x,y))
-                        lu = (int((x+xp)*16-w*img_size/2), int((y+yp)*16-h*img_size/2))
-                        rb = (int((x+xp)*16+w*img_size/2), int((y+yp)*16+h*img_size/2))
+                        lu = (int((x+xp)*32-w*img_size/2), int((y+yp)*32-h*img_size/2))
+                        rb = (int((x+xp)*32+w*img_size/2), int((y+yp)*32+h*img_size/2))
                         color = 255#int(255 - img[lu[1], lu[0]])
 
                         #if class_ == gt_class:
                         #    color = 255
                         #else :
                         #    color = 100
-                        if class_ < 10:
-                            cls_str = str(class_)
-                        elif class_ < 36:
-                            cls_str = chr(class_ + 87)
-                        elif class_ == 36:
-                            cls_str = "+"
-                        elif class_ == 37:
-                            cls_str = "-"
-                        elif class_ == 38:
-                            cls_str = "="
-                        cv2.putText(img,cls_str,(lu[0],lu[1]), font, 1,(color,color,color), 1,cv2.LINE_AA, False)
+                        #if class_ < 10:
+                        #    cls_str = str(class_)
+                        #elif class_ < 36:
+                        #    cls_str = chr(class_ + 87)
+                        #elif class_ == 36:
+                        #    cls_str = "+"
+                        #elif class_ == 37:
+                        #    cls_str = "-"
+                        #elif class_ == 38:
+                        #    cls_str = "="
+                        #cv2.putText(img,cls_str,(lu[0],lu[1]), font, 1,(color,color,color), 1,cv2.LINE_AA, False)
                         #    cv2.putText(img,str(gt_class),(rb[0],rb[1]), font, 1,(255,255,255), 1,cv2.LINE_AA, False)
                         #    print(gt_class)
                         cv2.rectangle(img, lu, rb, color)
@@ -183,7 +183,7 @@ if __name__ == '__main__':
         #                print(rb)
 
 
-            write_path = '../bounding_boxes/'+str(i)+'.jpg'
+            write_path = 'bounding_boxes/'+str(i)+'.jpg'
             cv2.imwrite(write_path,img)
     print('Finished Marking')
 

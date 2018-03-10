@@ -74,8 +74,8 @@ if __name__ == '__main__':
     img_size = 224
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
-    csv_path = 'data_eq_label'
-    img_path = 'data_eq'
+    csv_path = 'validation_eq_label'
+    img_path = 'validation_eq'
     dataset = Rand_num(csv_path, img_path, img_size, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)
@@ -87,8 +87,8 @@ if __name__ == '__main__':
 #    print (labels)
 #    print (images)
 
-    net = Net(batch_size)
-    vgg_model = vgg.vgg11_bn(num_classes=7*7*5)
+    #net = Net(batch_size)
+    vgg_model = vgg.vgg19_bn(num_classes=7*7*10)
     if load_checkpoint:
         vgg_model.load_state_dict(torch.load(SAVE_PATH))
 
@@ -131,16 +131,18 @@ if __name__ == '__main__':
             #gt_classes = labels[:, :, :, 5:]
             img = (inputs*256).data.cpu().int().numpy()[0,0]
             #predict_class = predicts[:,:,:,:num_classes] #batch_size, cell_size, cell_size, num of class (class score)
-            predict_confidence = predicts[:,:,:,4].contiguous().view(labels.size(0), labels.size(1), labels.size(2), 1)#batch_size, cell_size, cell_size, num of boxes (box confidence)
-            predict_boxes = predicts[:,:,:,:4] # batch_size, cell_size, cell_size, boxes_num, 4 (box coordinate)
+            predict_confidence = predicts[:,:,:,:2]#batch_size, cell_size, cell_size, num of boxes (box confidence)
+            predict_boxes = predicts[:,:,:,2:].contiguous().view(batch_size, cell_size, cell_size,2,4) # batch_size, cell_size, cell_size, boxes_num, 4 (box coordinate)
             #predict_boxes = outputs[:, (num_cells*num_cells*num_classes+num_cells*num_cells*2):].contiguous().view(1, num_cells, num_cells, 2, 4)
             #predict_confidence = outputs[:, num_cells*num_cells*num_classes:(num_cells*num_cells*num_classes+num_cells*num_cells*2)].contiguous().view(1, num_cells, num_cells, 2)
             #predict_class = outputs[:,:num_cells*num_cells*num_classes].contiguous().view(1, num_cells, num_cells, num_classes)
-            threshold = 0.1
-            detect_ob = torch.ge(predict_confidence, threshold).float()
+            max_confidence = torch.max(predict_confidence, 3, keepdim = True)
+            print(max_confidence[0])
+            threshold = 0.2
+            detect_ob = torch.ge(max_confidence[0], threshold).float()
             font = cv2.FONT_HERSHEY_PLAIN
             directory = os.path.dirname('bounding_boxes/')
-            print(predict_confidence[0,:,:, 0])
+            #print(predict_confidence[0,:,:, 0])
             if load_checkpoint is False:
                 detect_ob = labels[:,:,:,4].contiguous().view(labels.size(0), labels.size(1), labels.size(2), 1)
                 predict_boxes = labels[:,:,:,:4]
@@ -158,7 +160,8 @@ if __name__ == '__main__':
             for y in range(num_cells):
                 for x in range(num_cells):
                     if detect_ob.data.cpu().numpy()[0, y, x, 0] == 1 and load_checkpoint:
-                        xp, yp, w, h = predict_boxes.data.cpu().numpy()[0,y,x]
+                        selection = max_confidence[1].data.cpu().numpy()[0,y,x,0]
+                        xp, yp, w, h = predict_boxes.data.cpu().numpy()[0,y,x,selection]
                         lu = (int((x+xp)*32-w*img_size/2), int((y+yp)*32-h*img_size/2))
                         rb = (int((x+xp)*32+w*img_size/2), int((y+yp)*32+h*img_size/2))
                         color = 255 #int(255 - img[lu[1], lu[0]])
