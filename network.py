@@ -15,9 +15,9 @@ class Net(nn.Module):
         self.output_bits = self.num_classes+10
         self.conv1 = nn.Conv2d(1, 64, 7, padding=3)  #j=1, r=7
         self.conv2 = nn.Conv2d(64, 192, 3, padding=1) #j=j*s=2, r=r+(k-1)*j=11
-        self.conv3 = nn.Conv2d(192, 128, 3, padding=1) #j=2, r=15
+        self.conv3 = nn.Conv2d(192, 128, 5, padding=2) #j=2, r=15
         self.conv4 = nn.Conv2d(128, 256, 5, padding=2) #j=4, r=23
-        self.conv5 = nn.Conv2d(256, self.output_bits, 5, padding=2) #j=16, r=71+16*6=167
+        self.conv5 = nn.Conv2d(256, self.output_bits, 7, padding=3) #j=16, r=71+16*6=167
         self.pool = nn.MaxPool2d(2, 2)
         self.offset = torch.arange(0,self.cell_size).expand(self.cell_size*2,self.cell_size).contiguous().view(2, self.cell_size, self.cell_size).permute(1, 2, 0).contiguous().view(1,self.cell_size,self.cell_size,2).expand(self.batch_size,self.cell_size,self.cell_size,2)
         self.offset = Variable(self.offset)
@@ -29,6 +29,15 @@ class Net(nn.Module):
         self.batchnorm3=nn.BatchNorm2d(128)
         self.batchnorm4=nn.BatchNorm2d(256)
         self.batchnorm5=nn.BatchNorm2d(self.output_bits)
+        #self.classifier = nn.Sequential(
+        #        nn.Dropout(),
+        #        nn.Linear(self.output_bits*7*7, 1024),
+        #        nn.LeakyReLU(0.01),
+        #        nn.Dropout(),
+        #        nn.Linear(1024, 1024),
+        #        nn.LeakyReLU(0.01),
+        #        nn.Linear(1024, self.output_bits*7*7)
+        #        )
 
 
     def forward(self, x):
@@ -38,7 +47,11 @@ class Net(nn.Module):
         x = self.pool(F.leaky_relu(self.batchnorm4(self.conv4(x))))
         x = self.pool(x)
         x = self.batchnorm5(self.conv5(x))
+       # shape = x.size()
+       # x = x.contiguous().view(x.size(0), -1)
+       # x = self.classifier(x)
         x = torch.sigmoid(x)
+       # x = x.contiguous().view(shape)
         x = x.permute(0,2,3,1)
         return x
 
@@ -134,6 +147,7 @@ class Net(nn.Module):
         #coord loss
         coord_mask = object_mask.contiguous().view(self.batch_size, self.cell_size, self.cell_size, 2, 1)
         coord_delta = predict_boxes[:,:,:,:,:2] - gt_boxes[:,:,:,:,:2]
+        #coord_h = torch.sum(Variable(torch.ones(predict_boxes[:,:,:,:,3].size()))/predict_boxes[:,:,:,:,3])
         coord_delta_mask = coord_delta * coord_mask
         size_delta = torch.sqrt(predict_boxes[:,:,:,:,2:]) - torch.sqrt(gt_boxes[:,:,:,:,2:])
         size_delta_mask = size_delta * coord_mask

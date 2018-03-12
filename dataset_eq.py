@@ -39,9 +39,9 @@ def crop_image(img):
 
 def equation_gen(addrs, num_classes, pic_w):
     num_sym =  random.randint(1, 10)
-    max_w = np.minimum(100//num_sym, 24)
+    max_w = np.minimum(100//num_sym, 64)
     reX = random.randint(8, max_w)
-    reY = random.randint(8, 16)
+    reY = random.randint(8, 64)
     img = np.zeros((reY, reX*num_sym))
     for i in range(num_sym):
         label = random.randint(0, num_classes-1)

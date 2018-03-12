@@ -43,7 +43,10 @@ class Rand_num(Dataset):
     def __getitem__(self, index):
         image_addr = self.img_paths+'/'+str(index)+'.jpg'
         label_addr = self.csv_paths+'/0.csv'
-        img = np.expand_dims(cv2.imread(image_addr,0), 0)
+
+        img = cv2.imread(image_addr,0)
+        img = cv2.resize(img, (224,224), interpolation = cv2.INTER_CUBIC)
+        img = np.expand_dims(img, 0)
         #label = self.labels[index]
 
         image_labels = np.genfromtxt(label_addr, delimiter=',')
@@ -74,7 +77,7 @@ if __name__ == '__main__':
 
     print( '%s: calling main function ... ' % os.path.basename(__file__))
     csv_path = 'validation_eq_label'
-    img_path = 'validation_eq'
+    img_path = 'video_frames'
     dataset = Rand_num(csv_path, img_path, img_size, None)
     sampler = SequentialSampler(dataset)
     loader = DataLoader(dataset, batch_size = batch_size, sampler = sampler, shuffle = False, num_workers=1)

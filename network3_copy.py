@@ -31,10 +31,10 @@ class Net(nn.Module):
         self.batchnorm5=nn.BatchNorm2d(256)
 
         self.classifier = nn.Sequential(
-        #        nn.Dropout(),
+                nn.Dropout(),
                 nn.Linear(256*7*7, 4096),
                 nn.ReLU(inplace=True),
-        #        nn.Dropout(),
+                nn.Dropout(),
                 nn.Linear(4096, 4096),
                 nn.ReLU(inplace=True),
                 nn.Linear(4096, self.output_bits*7*7)
